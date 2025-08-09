@@ -48,8 +48,10 @@ func Req() gin.HandlerFunc {
 		}
 		// 重置HTTP请求体的偏移量
 		ctx.Request.Body = io.NopCloser(bytes.NewReader(reqBodyBytes))
+		var reqBody interface{}
+		_ = util.Unmarshal(ctx, string(reqBodyBytes), &reqBody)
 		logger.Info(ctx, logger.TagRequestIn, map[string]interface{}{
-			logger.KRequestBody: string(reqBodyBytes),
+			logger.KRequestBody: reqBody,
 		})
 
 		// 捕捉响应
@@ -68,7 +70,7 @@ func Req() gin.HandlerFunc {
 		}
 		logMap := map[string]interface{}{
 			logger.KCode:         rspBody.Code,
-			logger.KRequestBody:  string(reqBodyBytes),
+			logger.KRequestBody:  reqBody,
 			logger.KResponseBody: rspBody,
 			logger.KProcTime:     latency,
 		}
