@@ -1,0 +1,31 @@
+Age = 25
+[server]
+port = "8001"
+
+
+[log]
+path = "logs"
+file_name = "matt"
+max_backups = 8
+timeout = 2000
+
+[mysql]
+stu_go_dsn = "root:rootroot@tcp(127.0.0.1:3306)/go?charset=utf8mb4&parseTime=True&loc=Local"
+max_idle_cons = 10
+max_open_cons = 100
+con_max_lifetime = 1
+
+[kafka]
+addr = "127.0.0.1:9092"
+topic = "test"
+
+
+
+[[t]]
+a = 12344
+
+[[t]]
+a = 233
+
+
+
