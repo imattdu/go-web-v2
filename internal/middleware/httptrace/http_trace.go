@@ -2,12 +2,12 @@ package httptrace
 
 import (
 	"bytes"
-	"github.com/imattdu/go-web-v2/internal/cctx"
-	"github.com/imattdu/go-web-v2/internal/errorx"
+	"github.com/imattdu/go-web-v2/internal/common/cctx"
+	"github.com/imattdu/go-web-v2/internal/common/errorx"
+	"github.com/imattdu/go-web-v2/internal/common/trace"
+	"github.com/imattdu/go-web-v2/internal/common/util"
+	logger2 "github.com/imattdu/go-web-v2/internal/common/util/logger"
 	"github.com/imattdu/go-web-v2/internal/render"
-	"github.com/imattdu/go-web-v2/internal/trace"
-	"github.com/imattdu/go-web-v2/internal/util"
-	"github.com/imattdu/go-web-v2/internal/util/logger"
 	"io"
 	"net/http"
 	"time"
@@ -40,7 +40,7 @@ func Req() gin.HandlerFunc {
 		reqBodyBytes, err := ctx.GetRawData()
 		if err != nil {
 			_ = ctx.AbortWithError(http.StatusInternalServerError, err)
-			logger.Warn(ctx, logger.TagUndef, map[string]interface{}{
+			logger2.Warn(ctx, logger2.TagUndef, map[string]interface{}{
 				"msg": "GetRawData failed",
 				"err": err.Error(),
 			})
@@ -50,8 +50,8 @@ func Req() gin.HandlerFunc {
 		ctx.Request.Body = io.NopCloser(bytes.NewReader(reqBodyBytes))
 		var reqBody interface{}
 		_ = util.Unmarshal(ctx, string(reqBodyBytes), &reqBody)
-		logger.Info(ctx, logger.TagRequestIn, map[string]interface{}{
-			logger.KRequestBody: reqBody,
+		logger2.Info(ctx, logger2.TagRequestIn, map[string]interface{}{
+			logger2.KRequestBody: reqBody,
 		})
 
 		// 捕捉响应
@@ -69,16 +69,16 @@ func Req() gin.HandlerFunc {
 			return
 		}
 		logMap := map[string]interface{}{
-			logger.KCode:         rspBody.Code,
-			logger.KRequestBody:  reqBody,
-			logger.KResponseBody: rspBody,
-			logger.KProcTime:     latency,
+			logger2.KCode:         rspBody.Code,
+			logger2.KRequestBody:  reqBody,
+			logger2.KResponseBody: rspBody,
+			logger2.KProcTime:     latency,
 		}
 		if rspBody.ErrType != 0 && rspBody.ErrType != errorx.ErrTypeBiz.Code {
-			logger.Warn(ctx, logger.TagRequestOut, logMap)
+			logger2.Warn(ctx, logger2.TagRequestOut, logMap)
 			return
 		}
-		logger.Info(ctx, logger.TagRequestOut, logMap)
+		logger2.Info(ctx, logger2.TagRequestOut, logMap)
 		rspBody.ErrType = -1
 	}
 }

@@ -2,11 +2,11 @@ package cctx
 
 import (
 	"context"
+	trace2 "github.com/imattdu/go-web-v2/internal/common/trace"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/imattdu/go-web-v2/internal/trace"
 )
 
 type ctxKey string
@@ -17,15 +17,15 @@ var (
 	mysqlCtxKey ctxKey = "mysqlCtxKey"
 )
 
-func WithTraceCtx(ctx context.Context, trace *trace.Trace) context.Context {
+func WithTraceCtx(ctx context.Context, trace *trace2.Trace) context.Context {
 	ctx = Get(ctx)
 	return context.WithValue(ctx, traceCtxKey, trace)
 }
 
-func TraceFromCtxOrNew(ctx context.Context, newFn func() *trace.Trace) *trace.Trace {
+func TraceFromCtxOrNew(ctx context.Context, newFn func() *trace2.Trace) *trace2.Trace {
 	ctx = Get(ctx)
 
-	t, ok := ctx.Value(traceCtxKey).(*trace.Trace)
+	t, ok := ctx.Value(traceCtxKey).(*trace2.Trace)
 	if ok {
 		return t
 	} else if newFn == nil {
@@ -85,7 +85,7 @@ func New(ctx context.Context, req *http.Request) context.Context {
 		ctx = ginC.Request.Context()
 	}
 	if v := ctx.Value(traceCtxKey); v == nil {
-		ctx = WithTraceCtx(ctx, trace.New(req))
+		ctx = WithTraceCtx(ctx, trace2.New(req))
 	}
 	return ctx
 }

@@ -2,16 +2,16 @@ package main
 
 import (
 	"context"
-	"github.com/imattdu/go-web-v2/internal/config"
-	"github.com/imattdu/go-web-v2/internal/database/mysql"
-	"github.com/imattdu/go-web-v2/internal/middleware/httptrace"
 	"io"
 	"net/http"
 	"net/url"
 
-	"github.com/imattdu/go-web-v2/internal/cctx"
+	"github.com/imattdu/go-web-v2/internal/common/cctx"
+	"github.com/imattdu/go-web-v2/internal/common/config"
+	"github.com/imattdu/go-web-v2/internal/common/util/logger"
+	"github.com/imattdu/go-web-v2/internal/database/mysql"
+	"github.com/imattdu/go-web-v2/internal/middleware/httptrace"
 	"github.com/imattdu/go-web-v2/internal/router"
-	"github.com/imattdu/go-web-v2/internal/util/logger"
 
 	"github.com/gin-gonic/gin"
 )
@@ -43,7 +43,7 @@ func main() {
 
 	router.RegisterRoutes(r)
 	if err := r.Run(":8001"); err != nil {
-		logger.Info(ctx, logger.TagHttpSuccess, map[string]interface{}{
+		logger.Info(ctx, logger.TagUndef, map[string]interface{}{
 			"err": err.Error(),
 			"msg": "server start failed",
 		})

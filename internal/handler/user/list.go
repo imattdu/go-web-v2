@@ -1,20 +1,22 @@
 package user
 
 import (
-	"github.com/gin-gonic/gin"
 	userConverter "github.com/imattdu/go-web-v2/internal/converter/user"
 	userDTO "github.com/imattdu/go-web-v2/internal/dto/user"
 	"github.com/imattdu/go-web-v2/internal/render"
-	"github.com/imattdu/go-web-v2/internal/service/user"
+	userService "github.com/imattdu/go-web-v2/internal/service/user"
+	userAPI "github.com/imattdu/go-web-v2/internal/service/user/api"
+
+	"github.com/gin-gonic/gin"
 )
 
 type Handler struct {
-	UserService user.Service
+	UserService userAPI.Service
 }
 
 func NewHandler() *Handler {
 	return &Handler{
-		UserService: user.NewService(),
+		UserService: userService.NewService(),
 	}
 }
 
@@ -25,6 +27,17 @@ func (h *Handler) ListUser(c *gin.Context) {
 		return
 	}
 
-	rsp, err := h.UserService.List(c.Request.Context(), userConverter.ListRequestToParams(c, req))
-	render.JSON(c, 200, rsp, err)
+	params, err := userConverter.ListRequestToParams(c, req)
+	if err != nil {
+		render.JSON(c, 200, nil, err)
+		return
+	}
+	result, err := h.UserService.List(c.Request.Context(), params)
+	if err != nil {
+		render.JSON(c, 200, nil, err)
+		return
+	}
+	response, err := userConverter.ListParamsToResponse(c.Request.Context(), result)
+	render.JSON(c, 200, response, err)
+	return
 }

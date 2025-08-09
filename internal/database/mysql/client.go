@@ -2,10 +2,9 @@ package mysql
 
 import (
 	"context"
+	"github.com/imattdu/go-web-v2/internal/common/config"
+	logger2 "github.com/imattdu/go-web-v2/internal/common/util/logger"
 	"time"
-
-	"github.com/imattdu/go-web-v2/internal/config"
-	"github.com/imattdu/go-web-v2/internal/util/logger"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -17,7 +16,7 @@ var (
 
 func Init(c context.Context) error {
 	if err := NewDb(c); err != nil {
-		logger.Error(c, logger.TagUndef, map[string]interface{}{
+		logger2.Error(c, logger2.TagUndef, map[string]interface{}{
 			"msg": "mysql init failed",
 			"err": err.Error(),
 		})

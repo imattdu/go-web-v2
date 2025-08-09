@@ -1,10 +1,9 @@
 package logger
 
 import (
+	"github.com/imattdu/go-web-v2/internal/common/config"
 	"log/slog"
 	"time"
-
-	"github.com/imattdu/go-web-v2/internal/config"
 )
 
 var Logger *slog.Logger

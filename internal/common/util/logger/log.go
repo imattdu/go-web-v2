@@ -2,7 +2,7 @@ package logger
 
 import (
 	"context"
-	"github.com/imattdu/go-web-v2/internal/cctx"
+	"github.com/imattdu/go-web-v2/internal/common/cctx"
 	"log/slog"
 )
 

@@ -1,9 +1,8 @@
 package mysql
 
 import (
-	"github.com/imattdu/go-web-v2/internal/cctx"
-	"github.com/imattdu/go-web-v2/internal/util/logger"
-
+	"github.com/imattdu/go-web-v2/internal/common/cctx"
+	logger2 "github.com/imattdu/go-web-v2/internal/common/util/logger"
 	"gorm.io/gorm"
 	"time"
 )
@@ -64,8 +63,8 @@ func after(db *gorm.DB) {
 	)
 	if err != nil {
 		logMap["err"] = err.Error()
-		logger.Warn(ctx, logger.TagMysqlFailure, logMap)
+		logger2.Warn(ctx, logger2.TagMysqlFailure, logMap)
 		return
 	}
-	logger.Info(ctx, logger.TagMysqlSuccess, logMap)
+	logger2.Info(ctx, logger2.TagMysqlSuccess, logMap)
 }

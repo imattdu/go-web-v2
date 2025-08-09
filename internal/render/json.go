@@ -2,8 +2,8 @@ package render
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/imattdu/go-web-v2/internal/cctx"
-	"github.com/imattdu/go-web-v2/internal/errorx"
+	"github.com/imattdu/go-web-v2/internal/common/cctx"
+	"github.com/imattdu/go-web-v2/internal/common/errorx"
 )
 
 func JSON(ctx *gin.Context, status int, data interface{}, err error) {

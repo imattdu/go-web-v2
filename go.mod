@@ -5,6 +5,7 @@ go 1.24
 require (
 	github.com/BurntSushi/toml v1.5.0
 	github.com/gin-gonic/gin v1.10.1
+	github.com/jinzhu/copier v0.4.0
 	github.com/parnurzeal/gorequest v0.3.0
 	gorm.io/driver/mysql v1.6.0
 	gorm.io/gorm v1.30.1

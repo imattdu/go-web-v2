@@ -1,10 +1,9 @@
 package httpclient
 
 import (
+	"github.com/imattdu/go-web-v2/internal/common/errorx"
 	"net/http"
 	"time"
-
-	"github.com/imattdu/go-web-v2/internal/errorx"
 
 	"github.com/parnurzeal/gorequest"
 )

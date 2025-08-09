@@ -2,29 +2,26 @@ package user
 
 import (
 	"context"
-	"github.com/imattdu/go-web-v2/internal/database/mysql"
+	"github.com/imattdu/go-web-v2/internal/common/cctx"
 
-	"github.com/imattdu/go-web-v2/internal/cctx"
+	"github.com/imattdu/go-web-v2/internal/database/mysql"
 	"github.com/imattdu/go-web-v2/internal/model"
+	userAPI "github.com/imattdu/go-web-v2/internal/repository/user/api"
 
 	"gorm.io/gorm"
 )
-
-type Repository interface {
-	List(ctx context.Context, params ListByNameParams, tx *gorm.DB) ([]model.User, error)
-}
 
 type repository struct {
 	db *gorm.DB
 }
 
-func NewRepository() Repository {
+func NewRepository() userAPI.Repository {
 	return &repository{
 		db: mysql.GlobalDb,
 	}
 }
 
-func (r *repository) List(ctx context.Context, params ListByNameParams, tx *gorm.DB) ([]model.User, error) {
+func (r *repository) List(ctx context.Context, params userAPI.ListByNameParams, tx *gorm.DB) ([]model.User, error) {
 	if tx == nil {
 		tx = r.db
 	}

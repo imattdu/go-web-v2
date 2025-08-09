@@ -3,14 +3,13 @@ package httpclient
 import (
 	"context"
 	"errors"
+	"github.com/imattdu/go-web-v2/internal/common/cctx"
+	errorx2 "github.com/imattdu/go-web-v2/internal/common/errorx"
+	"github.com/imattdu/go-web-v2/internal/common/trace"
+	logger2 "github.com/imattdu/go-web-v2/internal/common/util/logger"
 	"net/http"
 	"strings"
 	"time"
-
-	"github.com/imattdu/go-web-v2/internal/cctx"
-	"github.com/imattdu/go-web-v2/internal/errorx"
-	"github.com/imattdu/go-web-v2/internal/trace"
-	"github.com/imattdu/go-web-v2/internal/util/logger"
 
 	"github.com/parnurzeal/gorequest"
 )
@@ -68,23 +67,23 @@ func prepareRequest(ctx context.Context, req *Req) error {
 }
 
 func validateResponse(req *Req) error {
-	req.Stats.code = errorx.Success.Code
+	req.Stats.code = errorx2.Success.Code
 	if len(req.Stats.errs) > 0 {
-		return errorx.New(errorx.NewQuery{
-			ErrMeta: errorx.ErrMeta{
-				ServiceType: errorx.ServiceTypeService,
+		return errorx2.New(errorx2.NewQuery{
+			ErrMeta: errorx2.ErrMeta{
+				ServiceType: errorx2.ServiceTypeService,
 				Service:     req.Service,
-				ErrType:     errorx.ErrTypeSys,
+				ErrType:     errorx2.ErrTypeSys,
 			},
-			Err: errors.New(errorx.Errs2Msg(req.Stats.errs)),
+			Err: errors.New(errorx2.Errs2Msg(req.Stats.errs)),
 		})
 	}
 	if req.Stats.rawResponse != nil && req.Stats.rawResponse.StatusCode != http.StatusOK {
-		return errorx.New(errorx.NewQuery{
-			ErrMeta: errorx.ErrMeta{
-				ServiceType: errorx.ServiceTypeService,
+		return errorx2.New(errorx2.NewQuery{
+			ErrMeta: errorx2.ErrMeta{
+				ServiceType: errorx2.ServiceTypeService,
 				Service:     req.Service,
-				ErrType:     errorx.ErrTypeSys,
+				ErrType:     errorx2.ErrTypeSys,
 			},
 			Err: errors.New(req.Stats.rawResponse.Status),
 		})
@@ -107,8 +106,8 @@ func (r Req) shouldRetry(err error) bool {
 	if r.Stats.rawResponse != nil && r.Stats.rawResponse.StatusCode != http.StatusOK {
 		return true
 	}
-	mErr := errorx.Get(err, false)
-	if mErr != nil && mErr.ErrType == errorx.ErrTypeSys {
+	mErr := errorx2.Get(err, false)
+	if mErr != nil && mErr.ErrType == errorx2.ErrTypeSys {
 		return true
 	}
 	return false
@@ -117,27 +116,27 @@ func (r Req) shouldRetry(err error) bool {
 func collect(ctx context.Context, req *Req, err error) {
 	var (
 		logMap = map[string]interface{}{
-			logger.KURL:          req.Meta.URL,
-			logger.KHeaders:      req.Meta.Headers,
-			logger.KRequestBody:  req.Meta.RequestBody,
-			logger.KResponseBody: req.Meta.ResponseBody,
-			logger.KResponseText: string(req.Stats.responseText),
+			logger2.KURL:          req.Meta.URL,
+			logger2.KHeaders:      req.Meta.Headers,
+			logger2.KRequestBody:  req.Meta.RequestBody,
+			logger2.KResponseBody: req.Meta.ResponseBody,
+			logger2.KResponseText: string(req.Stats.responseText),
 
-			logger.KProcTime:   req.Stats.duration.Milliseconds(),
-			logger.KCode:       req.Stats.code,
-			logger.KIsRPCFinal: req.Stats.isRpcFinal,
-			logger.KRetry:      req.Stats.retry,
-			logger.KRetryCount: req.Meta.RetryCount,
+			logger2.KProcTime:   req.Stats.duration.Milliseconds(),
+			logger2.KCode:       req.Stats.code,
+			logger2.KIsRPCFinal: req.Stats.isRpcFinal,
+			logger2.KRetry:      req.Stats.retry,
+			logger2.KRetryCount: req.Meta.RetryCount,
 		}
-		mErr = errorx.Get(err, false)
+		mErr = errorx2.Get(err, false)
 	)
 	if mErr != nil {
-		logMap[logger.KErr] = mErr.FinalMsg
+		logMap[logger2.KErr] = mErr.FinalMsg
 	}
 
-	if mErr != nil && mErr.ErrType == errorx.ErrTypeSys {
-		logger.Warn(ctx, logger.TagHttpFailure, logMap)
+	if mErr != nil && mErr.ErrType == errorx2.ErrTypeSys {
+		logger2.Warn(ctx, logger2.TagHttpFailure, logMap)
 	} else {
-		logger.Info(ctx, logger.TagHttpSuccess, logMap)
+		logger2.Info(ctx, logger2.TagHttpSuccess, logMap)
 	}
 }

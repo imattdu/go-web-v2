@@ -2,26 +2,30 @@ package user
 
 import (
 	"context"
-	"github.com/imattdu/go-web-v2/internal/model"
-	"github.com/imattdu/go-web-v2/internal/repository/user"
+
+	userRepo "github.com/imattdu/go-web-v2/internal/repository/user"
+	userRepoAPI "github.com/imattdu/go-web-v2/internal/repository/user/api"
+	userAPI "github.com/imattdu/go-web-v2/internal/service/user/api"
 )
 
-type Service interface {
-	List(ctx context.Context, params ListParams) ([]model.User, error)
+type service struct {
+	userRepo userRepoAPI.Repository
 }
 
-func NewService() Service {
+func NewService() userAPI.Service {
 	return &service{
-		UserRepository: user.NewRepository(),
+		userRepo: userRepo.NewRepository(),
 	}
 }
 
-type service struct {
-	UserRepository user.Repository
-}
-
-func (s *service) List(ctx context.Context, params ListParams) ([]model.User, error) {
-	return s.UserRepository.List(ctx, user.ListByNameParams{
+func (s *service) List(ctx context.Context, params userAPI.ListParams) (userAPI.ListResult, error) {
+	rsp, err := s.userRepo.List(ctx, userRepoAPI.ListByNameParams{
 		Username: params.Username,
 	}, nil)
+	if err != nil {
+		return userAPI.ListResult{}, err
+	}
+	return userAPI.ListResult{
+		Users: rsp,
+	}, nil
 }
