@@ -20,14 +20,14 @@
 
 ```plaintext
 ├── cmd/              # 应用启动入口
-├── internal/         # 应用核心代码（业务逻辑、服务层、仓库层）
-│   ├── api/          # API 层（Handler）
+├── internal/         # 应用核心代码（内部代码）
+│   ├── handler/      # API层
 │   ├── service/      # 业务服务层
 │   ├── repository/   # 数据访问层
 │   ├── dto/          # 请求和响应的数据结构定义
 │   ├── model/        # 领域模型定义
-│   ├── util/         # 工具类库
 │   ├── common/       # 公共基础设施（日志、追踪、错误处理等）
+│   ├── client/       # 外部服务依赖
 ├── pkg/              # 公共包，复用代码
 ├── configs/          # 配置文件
 ├── scripts/          # 启动、部署脚本
@@ -47,20 +47,20 @@ go run cmd/main.go
 
 示例代码请参考 internal/api 和 internal/service 下的具体实现，包含完整的请求处理、服务调用和数据访问流程。
 
-⸻
+
 
 ## 贡献指南
 
 欢迎提交 issue 和 pull request，参与项目完善。请遵守代码规范，保持代码简洁和一致。
 
-⸻
+
 
 ## 许可证
 
 本项目遵循 MIT 许可证，详细请查看 LICENSE 文件。
 
-⸻
+
 
 ## 联系方式
 
-如有疑问，请联系 [imattdu@gmail.com]
+如有疑问，请联系 imattdu@gmail.com
