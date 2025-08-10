@@ -2,13 +2,15 @@ package main
 
 import (
 	"context"
+	"github.com/imattdu/go-web-v2/internal/client/httpclientresty"
+	"github.com/imattdu/go-web-v2/internal/common/logger"
+	"github.com/imattdu/go-web-v2/internal/database/redis"
 	"io"
 	"net/http"
 	"net/url"
 
 	"github.com/imattdu/go-web-v2/internal/common/cctx"
 	"github.com/imattdu/go-web-v2/internal/common/config"
-	"github.com/imattdu/go-web-v2/internal/common/util/logger"
 	"github.com/imattdu/go-web-v2/internal/database/mysql"
 	"github.com/imattdu/go-web-v2/internal/middleware/httptrace"
 	"github.com/imattdu/go-web-v2/internal/router"
@@ -24,6 +26,9 @@ func Init(ctx context.Context) error {
 	if err := mysql.Init(ctx); err != nil {
 		return err
 	}
+
+	httpclientresty.Init()
+	redis.Init()
 	return nil
 }
 

@@ -3,7 +3,8 @@ package mysql
 import (
 	"context"
 	"github.com/imattdu/go-web-v2/internal/common/config"
-	logger2 "github.com/imattdu/go-web-v2/internal/common/util/logger"
+	logger2 "github.com/imattdu/go-web-v2/internal/common/logger"
+	gLogger "gorm.io/gorm/logger"
 	"time"
 
 	"gorm.io/driver/mysql"
@@ -34,7 +35,9 @@ func NewDb(c context.Context) error {
 		DontSupportRenameIndex:    true,  // 重命名索引时采用删除并新建的方式，MySQL 5.7 之前的数据库和 MariaDB 不支持重命名索引
 		DontSupportRenameColumn:   true,  // 用 `change` 重命名列，MySQL 8 之前的数据库和 MariaDB 不支持重命名列
 		SkipInitializeWithVersion: false, // 根据当前 MySQL 版本自动配置
-	}), &gorm.Config{})
+	}), &gorm.Config{
+		Logger: gLogger.Default.LogMode(gLogger.Silent), // 关闭日志
+	})
 	if err != nil {
 		//logs.Error(c, logs.LTagUndef).Err(err).Msg("NewStuGoDBCli failed")
 		return err

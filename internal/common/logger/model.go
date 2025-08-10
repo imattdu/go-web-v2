@@ -33,6 +33,7 @@ type LogConfig struct {
 	MaxFileSizeMB  int        // 超过多少 MB 分割，0 表示按小时切割
 	MaxBackups     int        // 最多保留文件个数
 	Timeout        time.Duration
+	ConsoleEnabled bool
 }
 
 type zeroHandler struct {

@@ -3,7 +3,8 @@ package logger
 const (
 	logK = "logger"
 
-	KErr = "err"
+	KErr    = "err"
+	KErrMsg = "err_msg"
 
 	KFrom = "from"
 	KURI  = "uri"
@@ -16,7 +17,11 @@ const (
 	TagMysqlFailure = "_com_mysql_failure"
 	TagHttpSuccess  = "_com_http_success"
 	TagHttpFailure  = "_com_http_failure"
+	TagRedisSuccess = "_com_redis_success"
+	TagRedisFailure = "_com_redis_failure"
 
+	KAttempt      = "attempt"
+	KRetries      = "retries"
 	KRetry        = "retry"
 	KRetryCount   = "retry_count"
 	KService      = "service"

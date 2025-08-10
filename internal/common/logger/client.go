@@ -18,6 +18,7 @@ func Init() {
 			ConsoleColored: true,
 			MaxBackups:     logConf.MaxBackups,
 			Timeout:        time.Millisecond * logConf.Timeout,
+			ConsoleEnabled: true,
 		}
 	)
 	if logConf.MaxBackups <= 4 {

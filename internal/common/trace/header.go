@@ -17,7 +17,13 @@ func NewHeader(c context.Context, trace *Trace) map[string]string {
 	header := make(map[string]string)
 	header[HeaderTraceID.K()] = trace.TraceId.V()
 	header[HeaderSpanID.K()] = trace.SpanId.V()
-	header[HeaderParentSpanID.K()] = RandSeq(6)
+	var parentSpanId string
+	if trace.ParentSpanId != nil {
+		parentSpanId = trace.ParentSpanId.V()
+	} else {
+		parentSpanId = RandSeq(6)
+	}
+	header[HeaderParentSpanID.K()] = parentSpanId
 	return header
 }
 

@@ -2,6 +2,7 @@ package user
 
 import (
 	"context"
+	"time"
 
 	userRepo "github.com/imattdu/go-web-v2/internal/repository/user"
 	userRepoAPI "github.com/imattdu/go-web-v2/internal/repository/user/api"
@@ -19,6 +20,7 @@ func NewService() userAPI.Service {
 }
 
 func (s *service) List(ctx context.Context, params userAPI.ListParams) (userAPI.ListResult, error) {
+	time.Sleep(time.Millisecond * 100)
 	rsp, err := s.userRepo.List(ctx, userRepoAPI.ListByNameParams{
 		Username: params.Username,
 	}, nil)

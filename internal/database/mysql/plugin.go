@@ -1,10 +1,12 @@
 package mysql
 
 import (
-	"github.com/imattdu/go-web-v2/internal/common/cctx"
-	logger2 "github.com/imattdu/go-web-v2/internal/common/util/logger"
-	"gorm.io/gorm"
 	"time"
+
+	"github.com/imattdu/go-web-v2/internal/common/cctx"
+	"github.com/imattdu/go-web-v2/internal/common/logger"
+
+	"gorm.io/gorm"
 )
 
 type LogPlugin struct{}
@@ -34,10 +36,9 @@ func (l LogPlugin) Initialize(db *gorm.DB) (err error) {
 
 func before(db *gorm.DB) {
 	ctx := db.Statement.Context
-	d := cctx.MysqlFromCtx(ctx)
-	d.Start = time.Now()
-	d.Query = nil
-	ctx = cctx.WithMysqlCtx(ctx, d)
+	stats := CallStatsFromCtx(ctx)
+	stats.Start = time.Now()
+	ctx = WithCallStatsCtx(ctx, stats)
 
 	trace := cctx.TraceFromCtxOrNew(ctx, nil).Copy()
 	trace.UpdateParentSpanID()
@@ -48,23 +49,23 @@ func before(db *gorm.DB) {
 func after(db *gorm.DB) {
 	var (
 		ctx      = db.Statement.Context
-		d        = cctx.MysqlFromCtx(ctx)
-		procTime = time.Since(d.Start)
+		stats    = CallStatsFromCtx(ctx)
+		procTime = time.Since(stats.Start)
 	)
 
 	var (
 		sql    = db.Dialector.Explain(db.Statement.SQL.String(), db.Statement.Vars)
 		err    = db.Error
 		logMap = map[string]interface{}{
-			"query":     d.Query,
+			"params":    stats.Params,
 			"sql":       sql,
 			"proc_time": procTime.Milliseconds(),
 		}
 	)
 	if err != nil {
 		logMap["err"] = err.Error()
-		logger2.Warn(ctx, logger2.TagMysqlFailure, logMap)
+		logger.Warn(ctx, logger.TagMysqlFailure, logMap)
 		return
 	}
-	logger2.Info(ctx, logger2.TagMysqlSuccess, logMap)
+	logger.Info(ctx, logger.TagMysqlSuccess, logMap)
 }

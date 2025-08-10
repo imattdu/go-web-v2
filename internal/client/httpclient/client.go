@@ -5,8 +5,8 @@ import (
 	"errors"
 	"github.com/imattdu/go-web-v2/internal/common/cctx"
 	errorx2 "github.com/imattdu/go-web-v2/internal/common/errorx"
+	"github.com/imattdu/go-web-v2/internal/common/logger"
 	"github.com/imattdu/go-web-v2/internal/common/trace"
-	logger2 "github.com/imattdu/go-web-v2/internal/common/util/logger"
 	"net/http"
 	"strings"
 	"time"
@@ -116,27 +116,27 @@ func (r Req) shouldRetry(err error) bool {
 func collect(ctx context.Context, req *Req, err error) {
 	var (
 		logMap = map[string]interface{}{
-			logger2.KURL:          req.Meta.URL,
-			logger2.KHeaders:      req.Meta.Headers,
-			logger2.KRequestBody:  req.Meta.RequestBody,
-			logger2.KResponseBody: req.Meta.ResponseBody,
-			logger2.KResponseText: string(req.Stats.responseText),
+			logger.KURL:          req.Meta.URL,
+			logger.KHeaders:      req.Meta.Headers,
+			logger.KRequestBody:  req.Meta.RequestBody,
+			logger.KResponseBody: req.Meta.ResponseBody,
+			logger.KResponseText: string(req.Stats.responseText),
 
-			logger2.KProcTime:   req.Stats.duration.Milliseconds(),
-			logger2.KCode:       req.Stats.code,
-			logger2.KIsRPCFinal: req.Stats.isRpcFinal,
-			logger2.KRetry:      req.Stats.retry,
-			logger2.KRetryCount: req.Meta.RetryCount,
+			logger.KProcTime:   req.Stats.duration.Milliseconds(),
+			logger.KCode:       req.Stats.code,
+			logger.KIsRPCFinal: req.Stats.isRpcFinal,
+			logger.KRetry:      req.Stats.retry,
+			logger.KRetryCount: req.Meta.RetryCount,
 		}
 		mErr = errorx2.Get(err, false)
 	)
 	if mErr != nil {
-		logMap[logger2.KErr] = mErr.FinalMsg
+		logMap[logger.KErr] = mErr.FinalMsg
 	}
 
 	if mErr != nil && mErr.ErrType == errorx2.ErrTypeSys {
-		logger2.Warn(ctx, logger2.TagHttpFailure, logMap)
+		logger.Warn(ctx, logger.TagHttpFailure, logMap)
 	} else {
-		logger2.Info(ctx, logger2.TagHttpSuccess, logMap)
+		logger.Info(ctx, logger.TagHttpSuccess, logMap)
 	}
 }

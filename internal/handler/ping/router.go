@@ -6,4 +6,5 @@ import (
 
 func (h *Handler) RegisterRoutes(group *gin.RouterGroup) {
 	group.GET("/ping", h.Ping)
+	group.POST("/cmd", h.Cmd)
 }

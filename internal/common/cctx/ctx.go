@@ -2,11 +2,10 @@ package cctx
 
 import (
 	"context"
-	trace2 "github.com/imattdu/go-web-v2/internal/common/trace"
-	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
+	tracex "github.com/imattdu/go-web-v2/internal/common/trace"
+	"net/http"
 )
 
 type ctxKey string
@@ -14,18 +13,17 @@ type ctxKey string
 var (
 	traceCtxKey ctxKey = "traceCtxKey"
 	ginCtxKey   ctxKey = "ginCtxKey"
-	mysqlCtxKey ctxKey = "mysqlCtxKey"
 )
 
-func WithTraceCtx(ctx context.Context, trace *trace2.Trace) context.Context {
+func WithTraceCtx(ctx context.Context, trace *tracex.Trace) context.Context {
 	ctx = Get(ctx)
 	return context.WithValue(ctx, traceCtxKey, trace)
 }
 
-func TraceFromCtxOrNew(ctx context.Context, newFn func() *trace2.Trace) *trace2.Trace {
+func TraceFromCtxOrNew(ctx context.Context, newFn func() *tracex.Trace) *tracex.Trace {
 	ctx = Get(ctx)
 
-	t, ok := ctx.Value(traceCtxKey).(*trace2.Trace)
+	t, ok := ctx.Value(traceCtxKey).(*tracex.Trace)
 	if ok {
 		return t
 	} else if newFn == nil {
@@ -55,28 +53,16 @@ func GinCtxFromCtxOrNew(ctx context.Context, newFu func() *gin.Context) *gin.Con
 	}
 }
 
-type Mysql struct {
-	Query interface{} `json:"query"`
-	Start time.Time   `json:"start"`
-}
-
-func WithMysqlCtx(ctx context.Context, d Mysql) context.Context {
-	ctx = Get(ctx)
-	return context.WithValue(ctx, mysqlCtxKey, d)
-}
-
-func MysqlFromCtx(ctx context.Context) Mysql {
-	if v, ok := ctx.Value(mysqlCtxKey).(Mysql); ok {
-		return v
-	}
-	return Mysql{}
-}
-
 func Get(c context.Context) context.Context {
 	if gCtx := GinCtxFromCtxOrNew(c, nil); gCtx != nil {
 		c = gCtx.Request.Context()
 	}
 	return c
+}
+
+func Copy(ctx context.Context) context.Context {
+	t := TraceFromCtxOrNew(ctx, nil)
+	return WithTraceCtx(context.Background(), t)
 }
 
 func New(ctx context.Context, req *http.Request) context.Context {
@@ -85,7 +71,7 @@ func New(ctx context.Context, req *http.Request) context.Context {
 		ctx = ginC.Request.Context()
 	}
 	if v := ctx.Value(traceCtxKey); v == nil {
-		ctx = WithTraceCtx(ctx, trace2.New(req))
+		ctx = WithTraceCtx(ctx, tracex.New(req))
 	}
 	return ctx
 }

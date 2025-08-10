@@ -2,15 +2,17 @@ package httptrace
 
 import (
 	"bytes"
+	"context"
+	logger2 "github.com/imattdu/go-web-v2/internal/common/logger"
+	"io"
+	"net/http"
+	"time"
+
 	"github.com/imattdu/go-web-v2/internal/common/cctx"
 	"github.com/imattdu/go-web-v2/internal/common/errorx"
 	"github.com/imattdu/go-web-v2/internal/common/trace"
 	"github.com/imattdu/go-web-v2/internal/common/util"
-	logger2 "github.com/imattdu/go-web-v2/internal/common/util/logger"
 	"github.com/imattdu/go-web-v2/internal/render"
-	"io"
-	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -28,11 +30,12 @@ func (w responseWriter) Write(b []byte) (int, error) {
 func Req() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var (
-			t    = trace.New(ctx.Request)
-			req  = ctx.Request
-			dCtx = cctx.WithGinCtx(req.Context(), ctx)
+			t   = trace.New(ctx.Request)
+			req = ctx.Request
+			//dCtx = cctx.WithGinCtx(req.Context(), ctx)
+			dCtx = context.Background()
 		)
-		dCtx = cctx.WithTraceCtx(ctx, t)
+		dCtx = cctx.WithTraceCtx(dCtx, t)
 		req = req.WithContext(dCtx)
 		ctx.Request = req
 

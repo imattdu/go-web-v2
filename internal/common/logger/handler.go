@@ -129,6 +129,9 @@ func (h *zeroHandler) writeRecord(ctx context.Context, r slog.Record) error {
 		return false
 	})
 	line := sb.String() + "\n"
+	if h.cfg.ConsoleEnabled {
+		fmt.Printf(line)
+	}
 
 	var (
 		n   int

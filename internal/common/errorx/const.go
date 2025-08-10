@@ -60,7 +60,7 @@ var (
 		Message: "系统错误",
 	}
 	ErrTypeBiz = &CodeEntry{
-		Code:    4,
+		Code:    5,
 		Message: "业务错误",
 	}
 )
