@@ -63,4 +63,4 @@ go run cmd/main.go
 
 ## 联系方式
 
-如有疑问，请联系 imattdu@gmail.com
+如有疑问，请联系 [imattdu@gmail.com](imattdu@gmail.com)
