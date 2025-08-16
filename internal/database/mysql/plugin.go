@@ -1,6 +1,8 @@
 package mysql
 
 import (
+	"errors"
+	"github.com/imattdu/go-web-v2/internal/common/errorx"
 	"time"
 
 	"github.com/imattdu/go-web-v2/internal/common/cctx"
@@ -9,13 +11,15 @@ import (
 	"gorm.io/gorm"
 )
 
-type LogPlugin struct{}
+type Plugin struct {
+	callee string
+}
 
-func (l LogPlugin) Name() string {
+func (l Plugin) Name() string {
 	return "logPlugin"
 }
 
-func (l LogPlugin) Initialize(db *gorm.DB) (err error) {
+func (l Plugin) Initialize(db *gorm.DB) (err error) {
 	beforeFuncName := "logPluginBefore"
 	_ = db.Callback().Create().Before("gorm:before_create").Register(beforeFuncName, before)
 	_ = db.Callback().Delete().Before("gorm:before_delete").Register(beforeFuncName, before)
@@ -56,16 +60,44 @@ func after(db *gorm.DB) {
 	var (
 		sql    = db.Dialector.Explain(db.Statement.SQL.String(), db.Statement.Vars)
 		err    = db.Error
+		vip, _ = db.Get("vip")
 		logMap = map[string]interface{}{
-			"params":    stats.Params,
-			"sql":       sql,
-			"proc_time": procTime.Milliseconds(),
+			logger.KParams:   stats.Params,
+			logger.KSql:      sql,
+			logger.KProcTime: procTime.Milliseconds(),
+			logger.KCallee:   vip,
 		}
 	)
 	if err != nil {
-		logMap["err"] = err.Error()
-		logger.Warn(ctx, logger.TagMysqlFailure, logMap)
-		return
+		logMap[logger.KErrMsg] = err.Error()
+		var (
+			isSuccess = errorx.Failed
+			errType   = errorx.ErrTypeSys
+			code      = errorx.ErrDefault.Code
+		)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			isSuccess = errorx.Success
+			errType = errorx.ErrTypeBiz
+			code = errorx.ErrNotFound.Code
+		}
+		err = errorx.New(errorx.ErrOptions{
+			ErrMeta: errorx.ErrMeta{
+				ServiceType: errorx.ServiceTypeBasic,
+				Service:     errorx.ServiceMysql,
+				ErrType:     errType,
+				IsSuccess:   isSuccess,
+			},
+			Code: code,
+			Err:  err,
+		})
+		db.Error = err
 	}
-	logger.Info(ctx, logger.TagMysqlSuccess, logMap)
+
+	mErr := errorx.Get(err, false)
+	if mErr != nil && mErr.ErrType == errorx.ErrTypeSys {
+		logger.Warn(ctx, logger.TagMysqlFailure, logMap)
+	} else {
+		logger.Info(ctx, logger.TagMysqlSuccess, logMap)
+	}
+
 }

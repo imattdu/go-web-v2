@@ -22,6 +22,7 @@ const (
 
 	KAttempt      = "attempt"
 	KRetries      = "retries"
+	KIsFinal      = "is_final"
 	KRetry        = "retry"
 	KRetryCount   = "retry_count"
 	KService      = "service"
@@ -32,4 +33,12 @@ const (
 	KIsRPCFinal   = "is_rpc_final"
 	KProcTime     = "proc_time"
 	KCode         = "code"
+
+	KCallee     = "callee"
+	KCalleeFunc = "callee_func"
+
+	KParams = "params"
+
+	KSql = "sql"
+	KCmd = "cmd"
 )

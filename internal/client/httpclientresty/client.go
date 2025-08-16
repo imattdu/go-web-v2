@@ -73,7 +73,7 @@ func NewClient() *Client {
 					logger.KRetryCount:   req.Meta.RetryCount,
 				}
 			)
-			err = errorx.New(errorx.NewQuery{
+			err = errorx.New(errorx.ErrOptions{
 				ErrMeta: errorx.ErrMeta{
 					ServiceType: errorx.ServiceTypeService,
 					Service:     req.Service,
@@ -133,7 +133,7 @@ func NewClient() *Client {
 			}()
 
 			if r.StatusCode() != 200 {
-				err = errorx.New(errorx.NewQuery{
+				err = errorx.New(errorx.ErrOptions{
 					ErrMeta: errorx.ErrMeta{
 						ServiceType: errorx.ServiceTypeService,
 						Service:     req.Service,
@@ -144,7 +144,7 @@ func NewClient() *Client {
 				return err
 			}
 			if req.Meta.IsError != nil {
-				err = errorx.New(errorx.NewQuery{
+				err = errorx.New(errorx.ErrOptions{
 					ErrMeta: errorx.ErrMeta{
 						ServiceType: errorx.ServiceTypeService,
 						Service:     req.Service,

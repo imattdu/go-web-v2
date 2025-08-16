@@ -23,7 +23,7 @@ type MErr struct {
 	FinalMsg       string `json:"final_msg"`
 }
 
-type NewQuery struct {
+type ErrOptions struct {
 	ErrMeta
 	Code int
 	Err  error

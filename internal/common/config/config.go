@@ -8,12 +8,12 @@ import (
 )
 
 type Conf struct {
-	Age    int     `toml:"age"`
-	Server server  `toml:"server"`
-	Log    logConf `toml:"log"`
-	Mysql  mysql   `toml:"mysql"`
-	Kafka  kafka   `toml:"kafka"`
-	T      []t     `toml:"t"`
+	Age    int       `toml:"age"`
+	Server server    `toml:"server"`
+	Log    logConf   `toml:"log"`
+	Mysql  MysqlConf `toml:"mysql"`
+	Kafka  kafka     `toml:"kafka"`
+	T      []t       `toml:"t"`
 }
 
 type server struct {
@@ -27,8 +27,9 @@ type logConf struct {
 	Timeout    time.Duration `toml:"timeout"`
 }
 
-type mysql struct {
-	StuGoDsn       string `toml:"stu_go_dsn"`
+type MysqlConf struct {
+	Dsn            string `toml:"dsn"`
+	Vip            string `toml:"vip"`
 	MaxIdleCons    int32  `toml:"max_idle_cons"`
 	MaxOpenCons    int32  `toml:"max_open_cons"`
 	ConMaxLifeTime int32  `toml:"con_max_lifetime"`

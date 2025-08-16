@@ -10,4 +10,5 @@ import (
 
 type Repository interface {
 	List(ctx context.Context, params ListByNameParams, tx *gorm.DB) ([]model.User, error)
+	Get(ctx context.Context, tx *gorm.DB) (model.User, error)
 }

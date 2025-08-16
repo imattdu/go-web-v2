@@ -69,7 +69,7 @@ func prepareRequest(ctx context.Context, req *Req) error {
 func validateResponse(req *Req) error {
 	req.Stats.code = errorx2.Success.Code
 	if len(req.Stats.errs) > 0 {
-		return errorx2.New(errorx2.NewQuery{
+		return errorx2.New(errorx2.ErrOptions{
 			ErrMeta: errorx2.ErrMeta{
 				ServiceType: errorx2.ServiceTypeService,
 				Service:     req.Service,
@@ -79,7 +79,7 @@ func validateResponse(req *Req) error {
 		})
 	}
 	if req.Stats.rawResponse != nil && req.Stats.rawResponse.StatusCode != http.StatusOK {
-		return errorx2.New(errorx2.NewQuery{
+		return errorx2.New(errorx2.ErrOptions{
 			ErrMeta: errorx2.ErrMeta{
 				ServiceType: errorx2.ServiceTypeService,
 				Service:     req.Service,

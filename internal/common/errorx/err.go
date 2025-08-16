@@ -10,7 +10,7 @@ func (e MErr) Error() string {
 	return e.FinalMsg
 }
 
-func New(query NewQuery) error {
+func New(query ErrOptions) error {
 	if query.Err == nil {
 		return nil
 	}
@@ -100,7 +100,7 @@ func Get(err error, isExternalErr bool) *MErr {
 	if errors.As(err, &rsp) && isExternalErr == rsp.IsExternalErr {
 		return &rsp
 	}
-	return Get(New(NewQuery{
+	return Get(New(ErrOptions{
 		ErrMeta: ErrMeta{
 			IsExternalErr: isExternalErr,
 		},

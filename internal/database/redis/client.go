@@ -7,22 +7,23 @@ import (
 
 var (
 	GlobalRedisClient *redis.Client
-	GlobalRetryClient RetryClient
+	GlobalRetryClient *retryClient
 )
 
 func Init() {
+	GlobalRedisClient = newRedisClient()
+	GlobalRetryClient = newRetryClient(retryConf{
+		retries: 3,
+		delay:   time.Millisecond * 100,
+	})
+}
+
+func newRedisClient() *redis.Client {
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     "localhost:6379",
 		Password: "", // no password set
-		//DB:       0,  // use default DB
 	})
 	// 注册 Hook
 	rdb.AddHook(&Hook{})
-
-	GlobalRedisClient = rdb
-
-	GlobalRetryClient = RetryClient{
-		retries: 3,
-		delay:   100 * time.Millisecond,
-	}
+	return rdb
 }

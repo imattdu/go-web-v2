@@ -28,7 +28,7 @@ func (s *service) Ping(ctx context.Context) string {
 	//		Timeout: time.Millisecond * 10,
 	//		//ResponseBody: &user.ListResponse{},
 	//		//IsError: func(response *http.Response) error {
-	//		//	return errorx.New(errorx.NewQuery{
+	//		//	return errorx.New(errorx.ErrOptions{
 	//		//		ErrMeta: errorx.ErrMeta{
 	//		//			ErrType: errorx.ErrTypeBiz,
 	//		//		},

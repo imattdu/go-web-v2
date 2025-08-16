@@ -10,7 +10,8 @@ max_backups = 8
 timeout = 2000
 
 [mysql]
-stu_go_dsn = "root:rootroot@tcp(127.0.0.1:3306)/go?charset=utf8mb4&parseTime=True&loc=Local"
+dsn = "root:rootroot@tcp(127.0.0.1:3306)/go?charset=utf8mb4&parseTime=True&loc=Local"
+vip = "127.0.0.1:3306"
 max_idle_cons = 10
 max_open_cons = 100
 con_max_lifetime = 1

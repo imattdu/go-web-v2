@@ -2,14 +2,25 @@ package redis
 
 import (
 	"context"
+	"time"
+
 	"github.com/imattdu/go-web-v2/internal/common/cctx"
 	"github.com/imattdu/go-web-v2/internal/common/errorx"
-	"time"
 )
 
-type RetryClient struct {
+type retryConf struct {
 	retries int
 	delay   time.Duration
+}
+
+type retryClient struct {
+	retryConf
+}
+
+func newRetryClient(conf retryConf) *retryClient {
+	return &retryClient{
+		retryConf: conf,
+	}
 }
 
 func shouldRetry(err error) bool {
@@ -20,7 +31,7 @@ func shouldRetry(err error) bool {
 	return mErr.ErrType == errorx.ErrTypeSys
 }
 
-func (r *RetryClient) RetryCmd(ctx context.Context, CmdFunc func(_ context.Context) error) error {
+func (r *retryClient) RetryCmd(ctx context.Context, CmdFunc func(_ context.Context) error) error {
 	var err error
 	for i := 0; i <= r.retries; i++ {
 		newCtx := WithCallStatsCtx(ctx, CallStats{

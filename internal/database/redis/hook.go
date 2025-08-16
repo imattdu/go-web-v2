@@ -3,11 +3,12 @@ package redis
 import (
 	"context"
 	"errors"
-	"fmt"
-	"github.com/go-redis/redis/v8"
+	"time"
+
 	"github.com/imattdu/go-web-v2/internal/common/errorx"
 	"github.com/imattdu/go-web-v2/internal/common/logger"
-	"time"
+
+	"github.com/go-redis/redis/v8"
 )
 
 // Hook 实现 redis.Hook 接口，用于日志记录
@@ -25,11 +26,11 @@ func (h *Hook) AfterProcess(ctx context.Context, cmd redis.Cmder) error {
 		stats   = CallStatsFromCtx(ctx)
 		latency = time.Since(stats.Start)
 		logMap  = map[string]interface{}{
-			logger.KAttempt:  stats.Attempt,
-			logger.KRetries:  stats.Retries,
-			"name":           cmd.Name(),
-			"params":         cmd.Args(),
-			logger.KProcTime: latency / time.Millisecond,
+			logger.KAttempt:    stats.Attempt,
+			logger.KRetries:    stats.Retries,
+			logger.KCalleeFunc: cmd.Name(),
+			logger.KCmd:        cmd.Args(),
+			logger.KProcTime:   latency / time.Millisecond,
 		}
 		err = cmd.Err()
 	)
@@ -44,7 +45,7 @@ func (h *Hook) AfterProcess(ctx context.Context, cmd redis.Cmder) error {
 			isSuc = errorx.Success
 			code = errorx.ErrNotFound.Code
 		}
-		err = errorx.New(errorx.NewQuery{
+		err = errorx.New(errorx.ErrOptions{
 			ErrMeta: errorx.ErrMeta{
 				ServiceType: errorx.ServiceTypeBasic,
 				Service:     errorx.ServiceRedis,
@@ -55,6 +56,11 @@ func (h *Hook) AfterProcess(ctx context.Context, cmd redis.Cmder) error {
 			Err:  err,
 		})
 	}
+	isFinal := stats.Attempt == stats.Retries
+	if !isFinal && !shouldRetry(err) {
+		isFinal = true
+	}
+	logMap[logger.KIsFinal] = isFinal
 
 	mErr := errorx.Get(err, false)
 	if mErr != nil {
@@ -71,11 +77,9 @@ func (h *Hook) AfterProcess(ctx context.Context, cmd redis.Cmder) error {
 }
 
 func (h *Hook) BeforeProcessPipeline(ctx context.Context, cmds []redis.Cmder) (context.Context, error) {
-	fmt.Printf("[BeforeProcessPipeline] Pipeline with %d cmds\n", len(cmds))
 	return ctx, nil
 }
 
 func (h *Hook) AfterProcessPipeline(ctx context.Context, cmds []redis.Cmder) error {
-	fmt.Printf("[AfterProcessPipeline] Pipeline executed\n")
 	return nil
 }
