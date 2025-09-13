@@ -2,9 +2,6 @@ package ping
 
 import (
 	"context"
-	"fmt"
-	"github.com/imattdu/go-web-v2/internal/database/redis"
-	"time"
 )
 
 type Service interface {
@@ -18,9 +15,9 @@ func NewService() Service {
 }
 
 func (s *service) Ping(ctx context.Context) string {
-	//_ = httpclientresty.Post(ctx, &httpclientresty.Req{
+	//_ = httpclient.Post(ctx, &httpclient.Req{
 	//	Service: errorx.ServiceMysql,
-	//	Meta: httpclientresty.ReqMeta{
+	//	Meta: httpclient.ReqMeta{
 	//		URL: "http://127.0.0.1:8001/go-web-v2/user/list",
 	//		RequestBody: user.ListRequest{
 	//			Username: "matt",
@@ -37,17 +34,5 @@ func (s *service) Ping(ctx context.Context) string {
 	//		//},
 	//	},
 	//})
-
-	var ss string
-	ss = "hh"
-	rsp, err := redis.TTL(ctx, &redis.KVEntry{
-		KeyPre:  "f99",
-		VBody:   &ss,
-		BaseTTL: time.Minute * 3,
-	})
-	fmt.Println(rsp, ss)
-	if err != nil {
-		fmt.Println(err.Error())
-	}
 	return "pong"
 }

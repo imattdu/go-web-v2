@@ -5,12 +5,12 @@ import (
 	"net/http"
 )
 
-func Get(ctx context.Context, req *Req) (err error) {
-	req.Meta.Method = http.MethodGet
+func Post(ctx context.Context, req *HttpRequest) error {
+	req.method = http.MethodPost
 	return do(ctx, req)
 }
 
-func Post(ctx context.Context, req *Req) (err error) {
-	req.Meta.Method = http.MethodPost
+func Get(ctx context.Context, req *HttpRequest) error {
+	req.method = http.MethodGet
 	return do(ctx, req)
 }

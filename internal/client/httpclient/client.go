@@ -3,140 +3,223 @@ package httpclient
 import (
 	"context"
 	"errors"
-	"github.com/imattdu/go-web-v2/internal/common/cctx"
-	errorx2 "github.com/imattdu/go-web-v2/internal/common/errorx"
-	"github.com/imattdu/go-web-v2/internal/common/logger"
-	"github.com/imattdu/go-web-v2/internal/common/trace"
+	"net"
 	"net/http"
-	"strings"
 	"time"
 
-	"github.com/parnurzeal/gorequest"
+	"github.com/imattdu/go-web-v2/internal/common/cctx"
+	"github.com/imattdu/go-web-v2/internal/common/errorx"
+	"github.com/imattdu/go-web-v2/internal/common/logger"
+	"github.com/imattdu/go-web-v2/internal/common/trace"
+
+	"github.com/go-resty/resty/v2"
 )
 
-func do(ctx context.Context, req *Req) error {
-	var err error
-	for attempt := 0; attempt <= req.Meta.RetryCount; attempt++ {
-		req.Stats.retry = attempt
-		t := cctx.TraceFromCtxOrNew(ctx, nil).Copy()
-		t.UpdateParentSpanID()
-		ctx = cctx.WithTraceCtx(ctx, t)
+var GlobalClient *Client
 
-		if err = prepareRequest(ctx, req); err != nil {
-			break
-		}
-		req.Stats.rawResponse, req.Stats.responseText, req.Stats.errs = req.client.EndStruct(&req.Meta.ResponseBody)
-		req.Stats.duration = time.Since(req.Stats.startTime)
-
-		err = validateResponse(req)
-		isRetry := req.shouldRetry(err) && attempt != req.Meta.RetryCount
-		req.Stats.isRpcFinal = !isRetry
-		collect(ctx, req, err)
-		if !isRetry {
-			break
-		}
-		time.Sleep(time.Duration(attempt+1) * 100 * time.Millisecond) // 递增退避
-	}
-	return err
+func Init() {
+	GlobalClient = NewClient()
 }
 
-func prepareRequest(ctx context.Context, req *Req) error {
-	if req.Meta.Headers == nil {
-		req.Meta.Headers = make(map[string]string, 16)
+// NewClient 创建一个新的 httpclient
+func NewClient() *Client {
+	transport := &http.Transport{
+		// 最大空闲连接数
+		MaxIdleConns: 100,
+		// 每个主机最大空闲连接数
+		MaxIdleConnsPerHost: 10,
+		// 空闲连接存活时间
+		IdleConnTimeout: 90 * time.Second,
+		// TLS 握手超时
+		TLSHandshakeTimeout: 10 * time.Second,
+		// 每个请求等待连接可用的时间
+		ExpectContinueTimeout: 1 * time.Second,
+		// 自定义拨号器（可以设置连接超时）
+		DialContext: (&net.Dialer{
+			Timeout:   5 * time.Second, // 连接超时
+			KeepAlive: 30 * time.Second,
+		}).DialContext,
 	}
-	t := cctx.TraceFromCtxOrNew(ctx, nil)
-	traceHeaders := trace.NewHeader(ctx, t)
-	for k, v := range traceHeaders {
-		req.Meta.Headers[k] = v
-	}
-	req.client = gorequest.New()
-	if req.Meta.Timeout > 0 {
-		req.client.Timeout(req.Meta.Timeout)
-	}
-	switch strings.ToUpper(req.Meta.Method) {
-	case http.MethodPost:
-		req.client = req.client.Post(req.Meta.URL).Send(req.Meta.RequestBody)
-	default:
-		req.client = req.client.Get(req.Meta.URL).Send(req.Meta.RequestBody)
-	}
-	for k, v := range req.Meta.Headers {
-		req.client = req.client.Set(k, v)
-	}
-	req.Stats.startTime = time.Now()
-	return nil
-}
 
-func validateResponse(req *Req) error {
-	req.Stats.code = errorx2.Success.Code
-	if len(req.Stats.errs) > 0 {
-		return errorx2.New(errorx2.ErrOptions{
-			ErrMeta: errorx2.ErrMeta{
-				ServiceType: errorx2.ServiceTypeService,
-				Service:     req.Service,
-				ErrType:     errorx2.ErrTypeSys,
-			},
-			Err: errors.New(errorx2.Errs2Msg(req.Stats.errs)),
+	c := resty.New().
+		SetTransport(transport).
+		SetRetryCount(0).
+		OnError(func(request *resty.Request, err error) {
+			if err == nil {
+				return
+			}
+			var mErr errorx.MErr
+			if errors.As(err, &mErr) {
+				return
+			}
+
+			var (
+				ctx    = request.Context()
+				req    = GetHttpRequest(ctx)
+				logMap = map[string]interface{}{
+					logger.KURL:         request.URL,
+					logger.KHeaders:     request.Header,
+					logger.KRequestBody: request.Body,
+
+					logger.KProcTime: time.Now().Sub(request.Time) / time.Millisecond,
+					logger.KAttempt:  req.Stats.attempt,
+					logger.KRetries:  req.Retries,
+				}
+			)
+			err = errorx.New(errorx.ErrOptions{
+				ErrMeta: errorx.ErrMeta{
+					ServiceType: errorx.ServiceTypeService,
+					Service:     req.Service,
+					ErrType:     errorx.ErrTypeSys,
+				},
+				Err: err,
+			})
+			req.Stats.lastError = err
+
+			rpcFinal := req.Stats.rpcFinal
+			if !rpcFinal {
+				rpcFinal = !shouldRetry(req, nil, err)
+			}
+			logMap[logger.KRPCFinal] = rpcFinal
+			logMap[logger.KErr] = err
+			logMap[logger.KErrMsg] = err.Error()
+			logger.Warn(ctx, logger.TagHttpFailure, logMap)
+		}).
+		OnBeforeRequest(func(c *resty.Client, r *resty.Request) error {
+			var (
+				ctx = r.Context()
+				req = GetHttpRequest(ctx)
+			)
+			req.Stats.rpcFinal = req.Stats.attempt == req.Retries
+			return nil
+		}).
+		OnAfterResponse(func(c *resty.Client, r *resty.Response) error {
+			var (
+				ctx    = r.Request.Context()
+				req    = GetHttpRequest(ctx)
+				logMap = map[string]interface{}{
+					logger.KURL:          r.Request.URL,
+					logger.KHeaders:      r.Request.Header,
+					logger.KRequestBody:  r.Request.Body,
+					logger.KResponseBody: string(r.Body()),
+
+					logger.KProcTime: r.Time() / time.Millisecond,
+					logger.KAttempt:  req.Stats.attempt,
+					logger.KRetries:  req.Retries,
+				}
+				err error
+			)
+			defer func() {
+				req.Stats.lastError = err
+				rpcFinal := req.Stats.rpcFinal
+				if !rpcFinal {
+					rpcFinal = !shouldRetry(req, r, err)
+				}
+				logMap[logger.KRPCFinal] = rpcFinal
+				mErr := errorx.Get(err, false)
+				if mErr != nil {
+					logMap[logger.KErrMsg] = mErr.FinalMsg
+				}
+				if mErr != nil && mErr.ErrType == errorx.ErrTypeSys {
+					logger.Warn(ctx, logger.TagHttpFailure, logMap)
+				} else {
+					logger.Info(ctx, logger.TagHttpSuccess, logMap)
+				}
+			}()
+
+			if r.StatusCode() != 200 {
+				err = errorx.New(errorx.ErrOptions{
+					ErrMeta: errorx.ErrMeta{
+						ServiceType: errorx.ServiceTypeService,
+						Service:     req.Service,
+					},
+					Err:  errors.New(r.Status()),
+					Code: r.StatusCode(),
+				})
+				return err
+			}
+			if req.IsError != nil {
+				err = errorx.New(errorx.ErrOptions{
+					ErrMeta: errorx.ErrMeta{
+						ServiceType: errorx.ServiceTypeService,
+						Service:     req.Service,
+					},
+					Err: req.IsError(r.RawResponse),
+				})
+				return err
+			}
+			return nil
 		})
-	}
-	if req.Stats.rawResponse != nil && req.Stats.rawResponse.StatusCode != http.StatusOK {
-		return errorx2.New(errorx2.ErrOptions{
-			ErrMeta: errorx2.ErrMeta{
-				ServiceType: errorx2.ServiceTypeService,
-				Service:     req.Service,
-				ErrType:     errorx2.ErrTypeSys,
-			},
-			Err: errors.New(req.Stats.rawResponse.Status),
-		})
-	}
-	if req.Meta.OnError != nil {
-		if err := req.Meta.OnError(req.Stats.rawResponse, req.Stats.responseText); err != nil {
-			return err
-		}
-	}
-	return nil
+	return &Client{client: c}
 }
 
-func (r Req) shouldRetry(err error) bool {
-	if r.Meta.RetryIf != nil {
-		if ok := r.Meta.RetryIf(r.Stats.rawResponse, r.Stats.responseText, err); ok {
-			return true
-		}
+func shouldRetry(req *HttpRequest, response *resty.Response, err error) bool {
+	if err == nil {
+		return false
 	}
-	// 非 200需要重试
-	if r.Stats.rawResponse != nil && r.Stats.rawResponse.StatusCode != http.StatusOK {
+	if response == nil {
 		return true
 	}
-	mErr := errorx2.Get(err, false)
-	if mErr != nil && mErr.ErrType == errorx2.ErrTypeSys {
+	mErr := errorx.Get(err, false)
+	if mErr.ErrType == errorx.ErrTypeSys {
 		return true
+	}
+	if req.RetryIf != nil {
+		return req.RetryIf(response.RawResponse, err)
 	}
 	return false
 }
 
-func collect(ctx context.Context, req *Req, err error) {
-	var (
-		logMap = map[string]interface{}{
-			logger.KURL:          req.Meta.URL,
-			logger.KHeaders:      req.Meta.Headers,
-			logger.KRequestBody:  req.Meta.RequestBody,
-			logger.KResponseBody: req.Meta.ResponseBody,
-			logger.KResponseText: string(req.Stats.responseText),
+func do(ctx context.Context, request *HttpRequest) error {
+	newCtx := cctx.CloneWithoutDeadline(ctx)
+	SetHttpRequest(newCtx, request)
+	for i := 0; i <= request.Retries; i++ {
+		request.Stats.attempt = i
+		request.Stats.rpcFinal = i == request.Retries
 
-			logger.KProcTime:   req.Stats.duration.Milliseconds(),
-			logger.KCode:       req.Stats.code,
-			logger.KIsRPCFinal: req.Stats.isRpcFinal,
-			logger.KRetry:      req.Stats.retry,
-			logger.KRetryCount: req.Meta.RetryCount,
+		// 每次循环都用独立作用域，确保 cancel 在本次结束时调用
+		err := func() error {
+			if request.Timeout > 0 {
+				newCtx = cctx.CloneWithoutDeadline(ctx)
+				var cancel context.CancelFunc
+				newCtx, cancel = context.WithTimeout(newCtx, request.Timeout)
+				defer cancel()
+			}
+
+			t := trace.GetTrace(newCtx)
+			t = t.Copy()
+			t.UpdateParentSpanID()
+			trace.SetTrace(newCtx, t)
+
+			var (
+				err     error
+				headers = trace.NewHeader(newCtx, t)
+			)
+			for k, v := range request.Headers {
+				headers[k] = v
+			}
+			r := GlobalClient.client.R().
+				SetContext(newCtx).
+				SetHeaders(headers).
+				SetBody(request.JSONBody).
+				SetResult(request.ResponseBody)
+			switch request.method {
+			case http.MethodGet:
+				_, _ = r.Get(request.URL)
+			case http.MethodPost:
+				_, _ = r.Post(request.URL)
+			}
+			err = request.Stats.lastError
+
+			if request.Stats.rpcFinal {
+				time.Sleep(time.Duration(i+1) * 100 * time.Millisecond) // 退避
+			}
+			return err
+		}()
+		// 没有重试就返回
+		if request.Stats.rpcFinal {
+			return err
 		}
-		mErr = errorx2.Get(err, false)
-	)
-	if mErr != nil {
-		logMap[logger.KErr] = mErr.FinalMsg
 	}
-
-	if mErr != nil && mErr.ErrType == errorx2.ErrTypeSys {
-		logger.Warn(ctx, logger.TagHttpFailure, logMap)
-	} else {
-		logger.Info(ctx, logger.TagHttpSuccess, logMap)
-	}
+	return nil
 }

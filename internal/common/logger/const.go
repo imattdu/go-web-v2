@@ -30,7 +30,7 @@ const (
 	KRequestBody  = "request_body"
 	KResponseBody = "response_body"
 	KResponseText = "response_text"
-	KIsRPCFinal   = "is_rpc_final"
+	KRPCFinal     = "rpc_final"
 	KProcTime     = "proc_time"
 	KCode         = "code"
 

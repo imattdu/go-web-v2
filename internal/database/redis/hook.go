@@ -15,15 +15,15 @@ import (
 type Hook struct{}
 
 func (h *Hook) BeforeProcess(ctx context.Context, cmd redis.Cmder) (context.Context, error) {
-	stats := CallStatsFromCtx(ctx)
+	stats := GetCallStats(ctx)
 	stats.Start = time.Now()
-	ctx = WithCallStatsCtx(ctx, stats)
+	SetCallStats(ctx, stats)
 	return ctx, nil
 }
 
 func (h *Hook) AfterProcess(ctx context.Context, cmd redis.Cmder) error {
 	var (
-		stats   = CallStatsFromCtx(ctx)
+		stats   = GetCallStats(ctx)
 		latency = time.Since(stats.Start)
 		logMap  = map[string]interface{}{
 			logger.KAttempt:    stats.Attempt,

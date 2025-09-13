@@ -3,13 +3,13 @@ package httptrace
 import (
 	"bytes"
 	"context"
-	logger2 "github.com/imattdu/go-web-v2/internal/common/logger"
 	"io"
 	"net/http"
 	"time"
 
 	"github.com/imattdu/go-web-v2/internal/common/cctx"
 	"github.com/imattdu/go-web-v2/internal/common/errorx"
+	"github.com/imattdu/go-web-v2/internal/common/logger"
 	"github.com/imattdu/go-web-v2/internal/common/trace"
 	"github.com/imattdu/go-web-v2/internal/common/util"
 	"github.com/imattdu/go-web-v2/internal/render"
@@ -32,18 +32,18 @@ func Req() gin.HandlerFunc {
 		var (
 			t   = trace.New(ctx.Request)
 			req = ctx.Request
-			//dCtx = cctx.WithGinCtx(req.Context(), ctx)
-			dCtx = context.Background()
+			c   = cctx.New(context.Background(), map[string]any{
+				cctx.KTrace: t,
+			})
 		)
-		dCtx = cctx.WithTraceCtx(dCtx, t)
-		req = req.WithContext(dCtx)
+		req = req.WithContext(c)
 		ctx.Request = req
 
 		// 获取body
 		reqBodyBytes, err := ctx.GetRawData()
 		if err != nil {
 			_ = ctx.AbortWithError(http.StatusInternalServerError, err)
-			logger2.Warn(ctx, logger2.TagUndef, map[string]interface{}{
+			logger.Warn(c, logger.TagUndef, map[string]interface{}{
 				"msg": "GetRawData failed",
 				"err": err.Error(),
 			})
@@ -53,8 +53,8 @@ func Req() gin.HandlerFunc {
 		ctx.Request.Body = io.NopCloser(bytes.NewReader(reqBodyBytes))
 		var reqBody interface{}
 		_ = util.Unmarshal(ctx, string(reqBodyBytes), &reqBody)
-		logger2.Info(ctx, logger2.TagRequestIn, map[string]interface{}{
-			logger2.KRequestBody: reqBody,
+		logger.Info(c, logger.TagRequestIn, map[string]interface{}{
+			logger.KRequestBody: reqBody,
 		})
 
 		// 捕捉响应
@@ -72,16 +72,16 @@ func Req() gin.HandlerFunc {
 			return
 		}
 		logMap := map[string]interface{}{
-			logger2.KCode:         rspBody.Code,
-			logger2.KRequestBody:  reqBody,
-			logger2.KResponseBody: rspBody,
-			logger2.KProcTime:     latency,
+			logger.KCode:         rspBody.Code,
+			logger.KRequestBody:  reqBody,
+			logger.KResponseBody: rspBody,
+			logger.KProcTime:     latency,
 		}
 		if rspBody.ErrType != 0 && rspBody.ErrType != errorx.ErrTypeBiz.Code {
-			logger2.Warn(ctx, logger2.TagRequestOut, logMap)
+			logger.Warn(c, logger.TagRequestOut, logMap)
 			return
 		}
-		logger2.Info(ctx, logger2.TagRequestOut, logMap)
+		logger.Info(c, logger.TagRequestOut, logMap)
 		rspBody.ErrType = -1
 	}
 }

@@ -7,7 +7,7 @@ import (
 )
 
 func Info(ctx context.Context, tag string, log interface{}) {
-	Logger.InfoContext(cctx.Copy(ctx), "", slog.Any(logK, Log{
+	Logger.InfoContext(cctx.CloneWithoutDeadline(ctx), "", slog.Any(logK, Log{
 		caller:  getCaller(),
 		tag:     tag,
 		message: log,
@@ -15,7 +15,7 @@ func Info(ctx context.Context, tag string, log interface{}) {
 }
 
 func Warn(ctx context.Context, tag string, log interface{}) {
-	Logger.WarnContext(cctx.Copy(ctx), "", slog.Any(logK, Log{
+	Logger.WarnContext(cctx.CloneWithoutDeadline(ctx), "", slog.Any(logK, Log{
 		caller:  getCaller(),
 		tag:     tag,
 		message: log,
@@ -23,7 +23,7 @@ func Warn(ctx context.Context, tag string, log interface{}) {
 }
 
 func Error(ctx context.Context, tag string, log interface{}) {
-	Logger.ErrorContext(cctx.Copy(ctx), "", slog.Any(logK, Log{
+	Logger.ErrorContext(cctx.CloneWithoutDeadline(ctx), "", slog.Any(logK, Log{
 		caller:  getCaller(),
 		tag:     tag,
 		message: log,

@@ -24,7 +24,7 @@ func (r *repository) List(ctx context.Context, params userAPI.ListByNameParams, 
 		tx = r.db
 	}
 	var users []model.User
-	err := tx.WithContext(mysql.WithCallStatsCtx(ctx, mysql.CallStats{
+	err := tx.WithContext(mysql.SetCallStatsClone(ctx, &mysql.CallStats{
 		Params: params,
 	})).Where("username = ?", params.Username).Find(&users).Error
 	return users, err
@@ -35,7 +35,7 @@ func (r *repository) Get(ctx context.Context, tx *gorm.DB) (model.User, error) {
 		tx = r.db
 	}
 	var user model.User
-	err := tx.WithContext(mysql.WithCallStatsCtx(ctx, mysql.CallStats{})).
+	err := tx.WithContext(mysql.SetCallStatsClone(ctx, &mysql.CallStats{})).
 		Where("username = ?", "haha").
 		First(&user).Error
 	return user, err

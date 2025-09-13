@@ -48,9 +48,14 @@ var (
 		Message: "redis",
 	}
 
-	ServiceUser = &CodeEntry{
-		Code:    19,
-		Message: "user",
+	ServiceBaidu = &CodeEntry{
+		Code:    91,
+		Message: "baidu",
+	}
+
+	ServicePing = &CodeEntry{
+		Code:    91,
+		Message: "ping",
 	}
 )
 

@@ -1,45 +1,38 @@
 package httpclient
 
 import (
-	"github.com/imattdu/go-web-v2/internal/common/errorx"
 	"net/http"
 	"time"
 
-	"github.com/parnurzeal/gorequest"
+	"github.com/imattdu/go-web-v2/internal/common/errorx"
+
+	"github.com/go-resty/resty/v2"
 )
 
-// ReqMeta carries request and response metadata.
-type ReqMeta struct {
-	Method       string            `json:"method"`
-	URL          string            `json:"url"`
-	URLParams    map[string]string `json:"url_params"`
-	Headers      map[string]string
-	RequestBody  interface{} `json:"request_body"`
-	ResponseBody interface{} `json:"response_body"`
-
-	Timeout    time.Duration `json:"timeout"`
-	RetryCount int           `json:"retry_count"`
-	RetryIf    func(*http.Response, []byte, error) bool
-	OnError    func(*http.Response, []byte) error
+type Client struct {
+	client *resty.Client
 }
 
 // callStats records timing and raw response info.
 type callStats struct {
-	startTime    time.Time
-	duration     time.Duration
-	rawResponse  *http.Response
-	responseText []byte
-	errs         []error
-	code         int
-
-	retry      int
-	isRpcFinal bool
+	attempt   int
+	lastError error
+	rpcFinal  bool
 }
 
-// Req wraps the full HTTP request context.
-type Req struct {
+type HttpRequest struct {
+	URL          string            `json:"url"`
+	QueryParams  map[string]string `json:"query_params"`
+	Headers      map[string]string `json:"headers"`
+	JSONBody     any               `json:"request_body,omitempty"`
+	ResponseBody any               `json:"response_body,omitempty"`
+
+	Timeout time.Duration `json:"timeout"`
+	Retries int           `json:"retry_count"`
+	RetryIf func(*http.Response, error) bool
+	IsError func(*http.Response) error
+
 	Service *errorx.CodeEntry
-	Meta    ReqMeta
 	Stats   callStats
-	client  *gorequest.SuperAgent
+	method  string
 }

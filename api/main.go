@@ -2,18 +2,18 @@ package main
 
 import (
 	"context"
-	"github.com/imattdu/go-web-v2/internal/client/httpclientresty"
+	"github.com/imattdu/go-web-v2/internal/client/httpclient"
+	"github.com/imattdu/go-web-v2/internal/common/cctx"
+	"github.com/imattdu/go-web-v2/internal/common/config"
 	"github.com/imattdu/go-web-v2/internal/common/logger"
+	"github.com/imattdu/go-web-v2/internal/common/trace"
+	"github.com/imattdu/go-web-v2/internal/database/mysql"
 	"github.com/imattdu/go-web-v2/internal/database/redis"
+	"github.com/imattdu/go-web-v2/internal/middleware/httptrace"
+	"github.com/imattdu/go-web-v2/internal/router"
 	"io"
 	"net/http"
 	"net/url"
-
-	"github.com/imattdu/go-web-v2/internal/common/cctx"
-	"github.com/imattdu/go-web-v2/internal/common/config"
-	"github.com/imattdu/go-web-v2/internal/database/mysql"
-	"github.com/imattdu/go-web-v2/internal/middleware/httptrace"
-	"github.com/imattdu/go-web-v2/internal/router"
 
 	"github.com/gin-gonic/gin"
 )
@@ -27,15 +27,16 @@ func Init(ctx context.Context) error {
 		return err
 	}
 
-	httpclientresty.Init()
+	httpclient.Init()
 	redis.Init()
 	return nil
 }
 
 func main() {
-	ctx := cctx.New(context.Background(), &http.Request{
-		URL: &url.URL{Path: "/init"},
-	})
+	ctx := cctx.New(context.Background(), map[string]any{})
+	trace.SetTrace(ctx, trace.New(&http.Request{
+		URL: &url.URL{},
+	}))
 	if err := Init(ctx); err != nil {
 		return
 	}

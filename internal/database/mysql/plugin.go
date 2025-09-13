@@ -3,9 +3,9 @@ package mysql
 import (
 	"errors"
 	"github.com/imattdu/go-web-v2/internal/common/errorx"
+	"github.com/imattdu/go-web-v2/internal/common/trace"
 	"time"
 
-	"github.com/imattdu/go-web-v2/internal/common/cctx"
 	"github.com/imattdu/go-web-v2/internal/common/logger"
 
 	"gorm.io/gorm"
@@ -40,20 +40,20 @@ func (l Plugin) Initialize(db *gorm.DB) (err error) {
 
 func before(db *gorm.DB) {
 	ctx := db.Statement.Context
-	stats := CallStatsFromCtx(ctx)
+	stats := GetCallStats(ctx)
 	stats.Start = time.Now()
-	ctx = WithCallStatsCtx(ctx, stats)
+	//SetCallStats(ctx, stats)
 
-	trace := cctx.TraceFromCtxOrNew(ctx, nil).Copy()
-	trace.UpdateParentSpanID()
-	ctx = cctx.WithTraceCtx(ctx, trace)
+	t := trace.GetTrace(ctx).Copy()
+	t.UpdateParentSpanID()
+	trace.SetTrace(ctx, t)
 	db.Statement.Context = ctx
 }
 
 func after(db *gorm.DB) {
 	var (
 		ctx      = db.Statement.Context
-		stats    = CallStatsFromCtx(ctx)
+		stats    = GetCallStats(ctx)
 		procTime = time.Since(stats.Start)
 	)
 
