@@ -20,7 +20,7 @@ func Init() {
 
 func newRedisClient() *redis.Client {
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
+		Addr:     "127.0.0.1:6379",
 		Password: "", // no password set
 	})
 	// 注册 Hook
