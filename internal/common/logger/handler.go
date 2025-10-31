@@ -4,9 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	trace2 "github.com/imattdu/go-web-v2/internal/common/trace"
+	"github.com/imattdu/go-web-v2/internal/common/cctxv2"
+	"github.com/imattdu/go-web-v2/internal/common/trace"
 	"log"
 	"log/slog"
+	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -104,8 +107,16 @@ func (h *zeroHandler) writeRecord(ctx context.Context, r slog.Record) error {
 		sb.WriteString(" ")
 		sb.WriteString(l.tag)
 		sb.WriteString("||")
-		sb.WriteString(trace2.GetTrace(ctx).String())
 
+		t, ok := cctxv2.GetAs[*trace.Trace](ctx, cctxv2.TraceKey)
+		if !ok {
+			t = trace.New(&http.Request{
+				URL: &url.URL{
+					Path: "log",
+				},
+			})
+		}
+		sb.WriteString(t.String())
 		msgMap, ok := l.message.(map[string]interface{})
 		if ok {
 			for k, v := range msgMap {

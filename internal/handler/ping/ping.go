@@ -3,7 +3,9 @@ package ping
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/imattdu/go-web-v2/internal/client/httpclient"
+	"github.com/imattdu/go-web-v2/internal/common/cctxv2"
 	"github.com/imattdu/go-web-v2/internal/common/errorx"
+	"github.com/imattdu/go-web-v2/internal/common/trace"
 	"github.com/imattdu/go-web-v2/internal/database/redis"
 	"github.com/imattdu/go-web-v2/internal/render"
 	"github.com/imattdu/go-web-v2/internal/service/ping"
@@ -21,11 +23,16 @@ func NewHandler() *Handler {
 }
 
 func (h *Handler) Ping(c *gin.Context) {
-	err := httpclient.Post(c.Request.Context(), &httpclient.HttpRequest{
+	ctx := c.Request.Context()
+	ctx = cctxv2.New(ctx, map[string]any{
+		cctxv2.TraceKey: trace.New(nil),
+	})
+	err := httpclient.Post(ctx, &httpclient.HttpRequest{
 		Service: errorx.ServiceBaidu,
 		URL:     "http://www.baidu.com1/xx44",
 		Retries: 3,
 	})
+
 	render.JSON(c, 200, map[string]interface{}{
 		"ping": h.PingService.Ping(c.Request.Context()),
 	}, errorx.New(errorx.ErrOptions{

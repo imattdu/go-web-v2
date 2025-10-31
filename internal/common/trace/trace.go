@@ -2,10 +2,17 @@ package trace
 
 import (
 	"net/http"
+	"net/url"
 	"strings"
 )
 
 func New(req *http.Request) *Trace {
+	if req == nil {
+		req, _ = http.NewRequest(http.MethodGet, "unknown", nil)
+	}
+	if req.URL == nil {
+		req.URL, _ = url.Parse("unknown")
+	}
 	return &Trace{
 		TraceId: &entry{
 			k: entryKTraceID,

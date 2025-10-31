@@ -2,8 +2,10 @@ package mysql
 
 import (
 	"errors"
+	"github.com/imattdu/go-web-v2/internal/common/cctxv2"
 	"github.com/imattdu/go-web-v2/internal/common/errorx"
 	"github.com/imattdu/go-web-v2/internal/common/trace"
+	"net/http"
 	"time"
 
 	"github.com/imattdu/go-web-v2/internal/common/logger"
@@ -40,20 +42,29 @@ func (l Plugin) Initialize(db *gorm.DB) (err error) {
 
 func before(db *gorm.DB) {
 	ctx := db.Statement.Context
-	stats := GetCallStats(ctx)
+	stats, ok := cctxv2.GetAs[*CallStats](ctx, cctxv2.MySQLCallStatsKey)
+	if !ok {
+		stats = &CallStats{}
+	}
 	stats.Start = time.Now()
-	//SetCallStats(ctx, stats)
 
-	t := trace.GetTrace(ctx).Copy()
+	t, ok := cctxv2.GetAs[*trace.Trace](ctx, cctxv2.TraceKey)
+	if !ok {
+		t = trace.New(&http.Request{})
+	}
+	t = t.Copy()
 	t.UpdateParentSpanID()
-	trace.SetTrace(ctx, t)
+	ctx = cctxv2.With(ctx, cctxv2.TraceKey, t)
 	db.Statement.Context = ctx
 }
 
 func after(db *gorm.DB) {
+	ctx := db.Statement.Context
+	stats, ok := cctxv2.GetAs[*CallStats](ctx, cctxv2.MySQLCallStatsKey)
+	if !ok {
+		return
+	}
 	var (
-		ctx      = db.Statement.Context
-		stats    = GetCallStats(ctx)
 		procTime = time.Since(stats.Start)
 	)
 

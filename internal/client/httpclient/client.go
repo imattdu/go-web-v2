@@ -5,9 +5,10 @@ import (
 	"errors"
 	"net"
 	"net/http"
+	"net/url"
 	"time"
 
-	"github.com/imattdu/go-web-v2/internal/common/cctx"
+	"github.com/imattdu/go-web-v2/internal/common/cctxv2"
 	"github.com/imattdu/go-web-v2/internal/common/errorx"
 	"github.com/imattdu/go-web-v2/internal/common/logger"
 	"github.com/imattdu/go-web-v2/internal/common/trace"
@@ -52,10 +53,12 @@ func NewClient() *Client {
 			if errors.As(err, &mErr) {
 				return
 			}
-
+			ctx := request.Context()
+			req, ok := cctxv2.GetAs[*HttpRequest](ctx, cctxv2.HttpClientRequestKey)
+			if !ok {
+				return
+			}
 			var (
-				ctx    = request.Context()
-				req    = GetHttpRequest(ctx)
 				logMap = map[string]interface{}{
 					logger.KURL:         request.URL,
 					logger.KHeaders:     request.Header,
@@ -86,17 +89,21 @@ func NewClient() *Client {
 			logger.Warn(ctx, logger.TagHttpFailure, logMap)
 		}).
 		OnBeforeRequest(func(c *resty.Client, r *resty.Request) error {
-			var (
-				ctx = r.Context()
-				req = GetHttpRequest(ctx)
-			)
+			ctx := r.Context()
+			req, ok := cctxv2.GetAs[*HttpRequest](ctx, cctxv2.HttpClientRequestKey)
+			if !ok {
+				return nil
+			}
 			req.Stats.rpcFinal = req.Stats.attempt == req.Retries
 			return nil
 		}).
 		OnAfterResponse(func(c *resty.Client, r *resty.Response) error {
+			ctx := r.Request.Context()
+			req, ok := cctxv2.GetAs[*HttpRequest](ctx, cctxv2.HttpClientRequestKey)
+			if !ok {
+				return nil
+			}
 			var (
-				ctx    = r.Request.Context()
-				req    = GetHttpRequest(ctx)
 				logMap = map[string]interface{}{
 					logger.KURL:          r.Request.URL,
 					logger.KHeaders:      r.Request.Header,
@@ -171,35 +178,40 @@ func shouldRetry(req *HttpRequest, response *resty.Response, err error) bool {
 }
 
 func do(ctx context.Context, request *HttpRequest) error {
-	newCtx := cctx.CloneWithoutDeadline(ctx)
-	SetHttpRequest(newCtx, request)
+	gCtx := cctxv2.With(ctx, cctxv2.HttpClientRequestKey, request)
 	for i := 0; i <= request.Retries; i++ {
 		request.Stats.attempt = i
 		request.Stats.rpcFinal = i == request.Retries
 
 		// 每次循环都用独立作用域，确保 cancel 在本次结束时调用
 		err := func() error {
+			curCtx, cancelClone := cctxv2.Clone(gCtx)
+			defer cancelClone()
 			if request.Timeout > 0 {
-				newCtx = cctx.CloneWithoutDeadline(ctx)
-				var cancel context.CancelFunc
-				newCtx, cancel = context.WithTimeout(newCtx, request.Timeout)
-				defer cancel()
+				c, cancelTimeout := context.WithTimeout(curCtx, request.Timeout)
+				defer cancelTimeout()
+				curCtx = c
 			}
 
-			t := trace.GetTrace(newCtx)
+			t, ok := cctxv2.GetAs[*trace.Trace](curCtx, cctxv2.TraceKey)
+			if !ok {
+				t = trace.New(&http.Request{
+					URL: &url.URL{},
+				})
+			}
 			t = t.Copy()
 			t.UpdateParentSpanID()
-			trace.SetTrace(newCtx, t)
+			curCtx = cctxv2.With(curCtx, cctxv2.TraceKey, t)
 
 			var (
 				err     error
-				headers = trace.NewHeader(newCtx, t)
+				headers = trace.NewHeader(curCtx, t)
 			)
 			for k, v := range request.Headers {
 				headers[k] = v
 			}
 			r := GlobalClient.client.R().
-				SetContext(newCtx).
+				SetContext(curCtx).
 				SetHeaders(headers).
 				SetBody(request.JSONBody).
 				SetResult(request.ResponseBody)
