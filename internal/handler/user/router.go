@@ -5,6 +5,7 @@ import (
 )
 
 func (h *Handler) RegisterRoutes(group *gin.RouterGroup) {
+
 	group = group.Group("/user")
 	group.POST("/list", h.ListUser)
 }
