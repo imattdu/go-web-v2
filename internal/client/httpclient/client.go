@@ -3,12 +3,12 @@ package httpclient
 import (
 	"context"
 	"errors"
+	"math/rand"
 	"net"
 	"net/http"
-	"net/url"
 	"time"
 
-	"github.com/imattdu/go-web-v2/internal/common/cctxv2"
+	"github.com/imattdu/go-web-v2/internal/common/cctx"
 	"github.com/imattdu/go-web-v2/internal/common/errorx"
 	"github.com/imattdu/go-web-v2/internal/common/logger"
 	"github.com/imattdu/go-web-v2/internal/common/trace"
@@ -54,10 +54,11 @@ func NewClient() *Client {
 				return
 			}
 			ctx := request.Context()
-			req, ok := cctxv2.GetAs[*HttpRequest](ctx, cctxv2.HttpClientRequestKey)
+			req, ok := cctx.GetAs[*HttpRequest](ctx, cctx.HttpClientRequestKey)
 			if !ok {
 				return
 			}
+
 			var (
 				logMap = map[string]interface{}{
 					logger.KURL:         request.URL,
@@ -90,7 +91,7 @@ func NewClient() *Client {
 		}).
 		OnBeforeRequest(func(c *resty.Client, r *resty.Request) error {
 			ctx := r.Context()
-			req, ok := cctxv2.GetAs[*HttpRequest](ctx, cctxv2.HttpClientRequestKey)
+			req, ok := cctx.GetAs[*HttpRequest](ctx, cctx.HttpClientRequestKey)
 			if !ok {
 				return nil
 			}
@@ -99,7 +100,7 @@ func NewClient() *Client {
 		}).
 		OnAfterResponse(func(c *resty.Client, r *resty.Response) error {
 			ctx := r.Request.Context()
-			req, ok := cctxv2.GetAs[*HttpRequest](ctx, cctxv2.HttpClientRequestKey)
+			req, ok := cctx.GetAs[*HttpRequest](ctx, cctx.HttpClientRequestKey)
 			if !ok {
 				return nil
 			}
@@ -121,6 +122,7 @@ func NewClient() *Client {
 				rpcFinal := req.Stats.rpcFinal
 				if !rpcFinal {
 					rpcFinal = !shouldRetry(req, r, err)
+					req.Stats.rpcFinal = rpcFinal
 				}
 				logMap[logger.KRPCFinal] = rpcFinal
 				mErr := errorx.Get(err, false)
@@ -164,9 +166,9 @@ func shouldRetry(req *HttpRequest, response *resty.Response, err error) bool {
 	if err == nil {
 		return false
 	}
-	if response == nil {
-		return true
-	}
+	//if response == nil {
+	//	return true
+	//}
 	mErr := errorx.Get(err, false)
 	if mErr.ErrType == errorx.ErrTypeSys {
 		return true
@@ -178,40 +180,37 @@ func shouldRetry(req *HttpRequest, response *resty.Response, err error) bool {
 }
 
 func do(ctx context.Context, request *HttpRequest) error {
-	gCtx := cctxv2.With(ctx, cctxv2.HttpClientRequestKey, request)
+	ctx = cctx.With(ctx, cctx.HttpClientRequestKey, request)
 	for i := 0; i <= request.Retries; i++ {
 		request.Stats.attempt = i
 		request.Stats.rpcFinal = i == request.Retries
 
 		// 每次循环都用独立作用域，确保 cancel 在本次结束时调用
 		err := func() error {
-			curCtx, cancelClone := cctxv2.Clone(gCtx)
+			newCtx, cancelClone := cctx.Clone(ctx)
 			defer cancelClone()
 			if request.Timeout > 0 {
-				c, cancelTimeout := context.WithTimeout(curCtx, request.Timeout)
+				c, cancelTimeout := context.WithTimeout(newCtx, request.Timeout)
 				defer cancelTimeout()
-				curCtx = c
+				newCtx = c
 			}
 
-			t, ok := cctxv2.GetAs[*trace.Trace](curCtx, cctxv2.TraceKey)
-			if !ok {
-				t = trace.New(&http.Request{
-					URL: &url.URL{},
-				})
-			}
+			t := cctx.GetOrNewAs[*trace.Trace](newCtx, cctx.TraceKey, func() *trace.Trace {
+				return trace.New(nil)
+			})
 			t = t.Copy()
 			t.UpdateParentSpanID()
-			curCtx = cctxv2.With(curCtx, cctxv2.TraceKey, t)
+			newCtx = cctx.With(newCtx, cctx.TraceKey, t)
 
 			var (
 				err     error
-				headers = trace.NewHeader(curCtx, t)
+				headers = trace.NewHeader(newCtx, t)
 			)
 			for k, v := range request.Headers {
 				headers[k] = v
 			}
 			r := GlobalClient.client.R().
-				SetContext(curCtx).
+				SetContext(newCtx).
 				SetHeaders(headers).
 				SetBody(request.JSONBody).
 				SetResult(request.ResponseBody)
@@ -222,9 +221,21 @@ func do(ctx context.Context, request *HttpRequest) error {
 				_, _ = r.Post(request.URL)
 			}
 			err = request.Stats.lastError
-
-			if request.Stats.rpcFinal {
-				time.Sleep(time.Duration(i+1) * 100 * time.Millisecond) // 退避
+			if !request.Stats.rpcFinal {
+				// 指数退避 + 抖动（Full Jitter），且可被取消
+				const base = 100 * time.Millisecond
+				backoff := time.Duration(1<<(i+1)) * base
+				if backoff > 2*time.Second {
+					backoff = 2 * time.Second
+				}
+				jitter := time.Duration(rand.Int63n(int64(backoff)))
+				delay := jitter
+				select {
+				case <-time.After(delay):
+					return nil
+				case <-ctx.Done():
+					return ctx.Err()
+				}
 			}
 			return err
 		}()

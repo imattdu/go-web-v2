@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/imattdu/go-web-v2/internal/common/cctxv2"
+	"github.com/imattdu/go-web-v2/internal/common/cctx"
 	"github.com/imattdu/go-web-v2/internal/common/trace"
 	"log"
 	"log/slog"
@@ -86,7 +86,7 @@ func (h *zeroHandler) writeRecord(ctx context.Context, r slog.Record) error {
 	var sb strings.Builder
 	parts := []string{
 		r.Level.String(),
-		r.Time.Format(time.RFC3339),
+		r.Time.Format("2006-01-02T15:04:05.000"),
 	}
 	r.Attrs(func(a slog.Attr) bool {
 		if a.Key != logK {
@@ -108,7 +108,7 @@ func (h *zeroHandler) writeRecord(ctx context.Context, r slog.Record) error {
 		sb.WriteString(l.tag)
 		sb.WriteString("||")
 
-		t, ok := cctxv2.GetAs[*trace.Trace](ctx, cctxv2.TraceKey)
+		t, ok := cctx.GetAs[*trace.Trace](ctx, cctx.TraceKey)
 		if !ok {
 			t = trace.New(&http.Request{
 				URL: &url.URL{

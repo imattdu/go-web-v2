@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/gin-gonic/gin"
 	"github.com/imattdu/go-web-v2/internal/client/httpclient"
-	"github.com/imattdu/go-web-v2/internal/common/cctxv2"
+	"github.com/imattdu/go-web-v2/internal/common/cctx"
 	"github.com/imattdu/go-web-v2/internal/common/config"
 	"github.com/imattdu/go-web-v2/internal/common/logger"
 	"github.com/imattdu/go-web-v2/internal/common/trace"
@@ -31,8 +31,8 @@ func Init(ctx context.Context) error {
 }
 
 func main() {
-	ctx := cctxv2.New(context.Background(), map[string]any{
-		cctxv2.TraceKey: trace.New(&http.Request{
+	ctx := cctx.New(context.Background(), map[string]any{
+		cctx.TraceKey: trace.New(&http.Request{
 			//URL: &url.URL{},
 		}),
 	})

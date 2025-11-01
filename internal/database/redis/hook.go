@@ -3,7 +3,7 @@ package redis
 import (
 	"context"
 	"errors"
-	"github.com/imattdu/go-web-v2/internal/common/cctxv2"
+	"github.com/imattdu/go-web-v2/internal/common/cctx"
 	"time"
 
 	"github.com/imattdu/go-web-v2/internal/common/errorx"
@@ -16,7 +16,7 @@ import (
 type Hook struct{}
 
 func (h *Hook) BeforeProcess(ctx context.Context, cmd redis.Cmder) (context.Context, error) {
-	stats, ok := cctxv2.GetAs[*CallStats](ctx, cctxv2.RedisCallStatsKey)
+	stats, ok := cctx.GetAs[*CallStats](ctx, cctx.RedisCallStatsKey)
 	if !ok {
 		return ctx, nil
 	}
@@ -25,7 +25,7 @@ func (h *Hook) BeforeProcess(ctx context.Context, cmd redis.Cmder) (context.Cont
 }
 
 func (h *Hook) AfterProcess(ctx context.Context, cmd redis.Cmder) error {
-	stats, ok := cctxv2.GetAs[*CallStats](ctx, cctxv2.RedisCallStatsKey)
+	stats, ok := cctx.GetAs[*CallStats](ctx, cctx.RedisCallStatsKey)
 	if !ok {
 		return nil
 	}

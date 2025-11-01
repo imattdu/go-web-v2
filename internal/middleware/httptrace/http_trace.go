@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/imattdu/go-web-v2/internal/common/cctxv2"
+	"github.com/imattdu/go-web-v2/internal/common/cctx"
 	"github.com/imattdu/go-web-v2/internal/common/errorx"
 	"github.com/imattdu/go-web-v2/internal/common/logger"
 	"github.com/imattdu/go-web-v2/internal/common/trace"
@@ -32,8 +32,8 @@ func Req() gin.HandlerFunc {
 		var (
 			t   = trace.New(ctx.Request)
 			req = ctx.Request
-			c   = cctxv2.New(context.Background(), map[string]any{
-				cctxv2.TraceKey: t,
+			c   = cctx.New(context.Background(), map[string]any{
+				cctx.TraceKey: t,
 			})
 		)
 		req = req.WithContext(c)

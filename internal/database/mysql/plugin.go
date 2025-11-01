@@ -2,7 +2,7 @@ package mysql
 
 import (
 	"errors"
-	"github.com/imattdu/go-web-v2/internal/common/cctxv2"
+	"github.com/imattdu/go-web-v2/internal/common/cctx"
 	"github.com/imattdu/go-web-v2/internal/common/errorx"
 	"github.com/imattdu/go-web-v2/internal/common/trace"
 	"net/http"
@@ -42,25 +42,25 @@ func (l Plugin) Initialize(db *gorm.DB) (err error) {
 
 func before(db *gorm.DB) {
 	ctx := db.Statement.Context
-	stats, ok := cctxv2.GetAs[*CallStats](ctx, cctxv2.MySQLCallStatsKey)
+	stats, ok := cctx.GetAs[*CallStats](ctx, cctx.MySQLCallStatsKey)
 	if !ok {
 		stats = &CallStats{}
 	}
 	stats.Start = time.Now()
 
-	t, ok := cctxv2.GetAs[*trace.Trace](ctx, cctxv2.TraceKey)
+	t, ok := cctx.GetAs[*trace.Trace](ctx, cctx.TraceKey)
 	if !ok {
 		t = trace.New(&http.Request{})
 	}
 	t = t.Copy()
 	t.UpdateParentSpanID()
-	ctx = cctxv2.With(ctx, cctxv2.TraceKey, t)
+	ctx = cctx.With(ctx, cctx.TraceKey, t)
 	db.Statement.Context = ctx
 }
 
 func after(db *gorm.DB) {
 	ctx := db.Statement.Context
-	stats, ok := cctxv2.GetAs[*CallStats](ctx, cctxv2.MySQLCallStatsKey)
+	stats, ok := cctx.GetAs[*CallStats](ctx, cctx.MySQLCallStatsKey)
 	if !ok {
 		return
 	}

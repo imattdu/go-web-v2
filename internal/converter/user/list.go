@@ -2,10 +2,12 @@ package user
 
 import (
 	"context"
+	"reflect"
+
 	"github.com/imattdu/go-web-v2/internal/dto/user"
 	userAPI "github.com/imattdu/go-web-v2/internal/service/user/api"
+
 	"github.com/jinzhu/copier"
-	"reflect"
 )
 
 func ListRequestToParams(ctx context.Context, request user.ListRequest) (params userAPI.ListParams, err error) {

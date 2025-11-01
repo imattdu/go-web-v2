@@ -2,7 +2,7 @@ package user
 
 import (
 	"context"
-	"github.com/imattdu/go-web-v2/internal/common/cctxv2"
+	"github.com/imattdu/go-web-v2/internal/common/cctx"
 	"github.com/imattdu/go-web-v2/internal/database/mysql"
 	"github.com/imattdu/go-web-v2/internal/model"
 	userAPI "github.com/imattdu/go-web-v2/internal/repository/user/api"
@@ -25,7 +25,7 @@ func (r *repository) List(ctx context.Context, params userAPI.ListByNameParams, 
 		tx = r.db
 	}
 	var users []model.User
-	err := tx.WithContext(cctxv2.With(ctx, cctxv2.MySQLCallStatsKey, &mysql.CallStats{
+	err := tx.WithContext(cctx.With(ctx, cctx.MySQLCallStatsKey, &mysql.CallStats{
 		Params: params,
 	})).Where("username = ?", params.Username).Find(&users).Error
 	return users, err
@@ -36,7 +36,7 @@ func (r *repository) Get(ctx context.Context, tx *gorm.DB) (model.User, error) {
 		tx = r.db
 	}
 	var user model.User
-	err := tx.WithContext(cctxv2.With(ctx, cctxv2.MySQLCallStatsKey, &mysql.CallStats{})).
+	err := tx.WithContext(cctx.With(ctx, cctx.MySQLCallStatsKey, &mysql.CallStats{})).
 		Where("username = ?", "haha").
 		First(&user).Error
 	return user, err

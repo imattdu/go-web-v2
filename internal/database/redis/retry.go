@@ -2,7 +2,7 @@ package redis
 
 import (
 	"context"
-	"github.com/imattdu/go-web-v2/internal/common/cctxv2"
+	"github.com/imattdu/go-web-v2/internal/common/cctx"
 	"github.com/imattdu/go-web-v2/internal/common/trace"
 	"time"
 
@@ -35,14 +35,14 @@ func shouldRetry(err error) bool {
 func (r *retryClient) RetryCmd(ctx context.Context, CmdFunc func(_ context.Context) error) error {
 	var err error
 	for i := 0; i <= r.retries; i++ {
-		c := cctxv2.With(ctx, cctxv2.RedisCallStatsKey, &CallStats{})
+		c := cctx.With(ctx, cctx.RedisCallStatsKey, &CallStats{})
 
-		t := cctxv2.GetOrNewAs[*trace.Trace](c, cctxv2.TraceKey, func() *trace.Trace {
+		t := cctx.GetOrNewAs[*trace.Trace](c, cctx.TraceKey, func() *trace.Trace {
 			return trace.New(nil)
 		})
 		t = t.Copy()
 		t.UpdateParentSpanID()
-		c = cctxv2.With(c, cctxv2.TraceKey, t)
+		c = cctx.With(c, cctx.TraceKey, t)
 
 		err = CmdFunc(c)
 		if !shouldRetry(err) {
